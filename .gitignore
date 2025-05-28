@@ -19,7 +19,7 @@ __pycache__/
 # Logs and summaries
 *.log
 *.tsv
-*.txt
+# *.txt
 
 # Environment
 .env
@@ -36,7 +36,7 @@ env/
 *.egg-info/
 *.manifest
 *.lock
-build/
+
 
 
 # VSCode
@@ -50,4 +50,4 @@ Thumbs.db
 run_viir_original.sh
 run_viir_QIU.sh
 # Temporary files
-
+build/
