@@ -82,6 +82,51 @@ optional arguments:
   -v, --version       show program's version number and exit
 ```
 
+---
+
+### 🧩 Using YAML Configuration File
+
+Starting from version 0.0.2+, **ViiR now supports running via a YAML-based configuration file**, making it easier to batch-run analyses and archive parameter settings.
+
+#### 📄 Example: `config_example.yaml`
+
+```yaml
+fastq-list: input/sample_list.txt         # Required: path to FASTQ list
+out: output/run_20250527_01               # Required: output directory
+threads: 16                               # Optional: number of threads
+adapter: Default_adapter                  # Optional: adapter file or default
+pfam: Default_list                        # Optional: Pfam ID list or default
+SS-lib-type: No                           # Optional: strand specificity (No/FR/RF)
+blastndb: Default_db                      # Optional: BLASTN DB or default
+pvalue: 0.01                              # Optional: DESeq2 p-value threshold
+max-memory: 32G                           # Optional: memory limit for Trinity
+```
+
+#### 🚀 How to Run with Config File
+
+```bash
+viir --config config/config_example.yaml
+```
+
+ If both `--config` and command-line arguments are used, **CLI arguments override config values**.
+  
+Override any value inline:
+
+```bash
+viir --config config/config_example.yaml --threads 32 --pvalue 0.005
+```
+
+
+#### 📁 Output Structure
+
+When using YAML, ViiR will automatically:
+
+* Save `config_used.yaml` inside the output folder for reproducibility.
+* Download and execute the `run_viir.sh` pipeline script in the same output folder.
+
+---
+
+
 ### Example 1 : Run ViiR with default settings
 
 ```

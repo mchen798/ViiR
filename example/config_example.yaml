@@ -1,0 +1,28 @@
+# === Required Inputs ===
+# Path to FASTQ list file
+fastq-list: input/your_fastq_list.txt  
+
+# Output directory (will be created automatically)
+out: output/run_20250527_01            
+
+# === Optional Parameters ===
+# Number of threads to use [default: 16]
+threads: 16    
+
+# Adapter FASTA file, or "Default_adapter" to auto-download                     
+adapter: Default_adapter   
+
+# Pfam ID list file, or "Default_list" to auto-download         
+pfam: Default_list      
+
+# Strand-specific library type: No, FR, or RF               
+SS-lib-type: RF             
+
+ # BLASTN DB FASTA, or "Default_db" to auto-download from GitHub 
+blastndb: Default_db        
+
+ # p-value cutoff for DESeq2 differential expression          
+pvalue: 0.01                
+
+ # Max memory for Trinity assembly (e.g., 32G)
+max-memory: 32G                       

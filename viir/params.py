@@ -1,6 +1,10 @@
 import sys
+import os
 import argparse
+import yaml
+from datetime import datetime
 from viir.__init__ import __version__
+
 
 
 class Params(object):
@@ -9,14 +13,57 @@ class Params(object):
         self.program_name = program_name
 
     def set_options(self):
-        if self.program_name == 'viir':
-            parser = self.viir_options()
+        parser = self.viir_options()
 
-        if len(sys.argv) == 1:
-            args = parser.parse_args(['-h'])
+        # Add new argument for YAML config file
+        parser.add_argument('--config', type=str, help='Path to a YAML configuration file.', default=None)
+
+            # Clean sys.argv: remove script path if present as argument
+        cleaned_argv = [arg for arg in sys.argv[1:] if not os.path.exists(arg) or arg.endswith('.yaml')]
+
+        if '--config' in cleaned_argv:
+            # First parse only --config to find the file path
+            index = cleaned_argv.index('--config')
+            try:
+                config_path = cleaned_argv[index + 1]
+            except IndexError:
+                raise ValueError("Missing path after --config")
+
+            # Load config from YAML
+            with open(config_path, 'r') as f:
+                config_dict = yaml.safe_load(f)
+
+            if 'out' not in config_dict or not config_dict['out']:
+                timestamp = datetime.now().strftime(\"%Y%m%d_%H%M%S\")
+                config_dict['out'] = f\"output/run_{timestamp}\"
+
+            # After loading config_dict
+            valid_keys = {a.dest for a in parser._actions if a.dest != 'help'}
+            unknown_keys = set(config_dict.keys()) - valid_keys
+            if unknown_keys:
+                raise ValueError(f"Unknown config keys in YAML: {unknown_keys}")
+
+
+            # Turn YAML config into args list
+            yaml_arg_list = []
+            for key, value in config_dict.items():
+                key = f'--{key}'
+                if isinstance(value, bool):
+                    if value:
+                        yaml_arg_list.append(key)
+                else:
+                    yaml_arg_list.extend([key, str(value)])
+
+            # Combine YAML + CLI overrides
+            extra_args = [arg for i, arg in enumerate(cleaned_argv) if i < index or i > index + 1]
+            args = parser.parse_args(yaml_arg_list + extra_args)
+
         else:
-            args = parser.parse_args()
+            args = parser.parse_args() if len(cleaned_argv) > 1 else parser.parse_args(['-h'])
+
         return args
+
+
 
     def viir_options(self):
         parser = argparse.ArgumentParser(description='ViiR version {}'.format(__version__),
@@ -27,7 +74,7 @@ class Params(object):
         parser.add_argument('-l',
                             '--fastq-list',
                             action='store',
-                            required=True,
+                            required=('--config' not in sys.argv),
                             type=str,
                             help='Fastq list.',
                             metavar='')
@@ -35,7 +82,7 @@ class Params(object):
         parser.add_argument('-o',
                             '--out',
                             action='store',
-                            required=True,
+                            required=('--config' not in sys.argv),
                             type=str,
                             help=('Output directory. Specified name must not\n'
                                   'exist.'),

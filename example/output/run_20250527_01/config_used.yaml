@@ -1,0 +1,10 @@
+fastq_list: input/your_fastq_list.txt
+out: output/run_20250527_01
+threads: 16
+adapter: Default_adapter
+pfam: Default_list
+SS_lib_type: RF
+blastndb: Default_db
+pvalue: 0.01
+max_memory: 32G
+config: null

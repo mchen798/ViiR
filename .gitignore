@@ -1,1 +1,53 @@
 .DS_Store
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Output folders from scripts
+*/00_fastq/
+*/10_trinity/
+*/20_estimate_abundance/
+*/30_count_matrix/
+*/40_DEGseq2/
+*/50_hmmer/
+*/60_fasta/
+*/70_barrnap/
+*/80_kmer/
+*/90_blastn/
+
+# Logs and summaries
+*.log
+*.tsv
+*.txt
+
+# Environment
+.env
+*.env
+# *.yml
+# *.yaml
+venv/
+env/
+.venv/
+
+# Conda
+*.conda
+*.condarc
+*.egg-info/
+*.manifest
+*.lock
+build/
+
+
+# VSCode
+.vscode/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Test files
+run_viir_original.sh
+run_viir_QIU.sh
+# Temporary files
+
