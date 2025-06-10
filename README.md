@@ -174,3 +174,28 @@ viir -l sample_list.txt \
 `--max-memory` : Maximum memory used for Trinity.
 
 `--SS-lib-type` : Type of strand specific library (FR or RF).
+
+## Docker-based Web Interface
+
+A prebuilt Docker image allows running ViiR together with a small web page.
+Build the container:
+
+```bash
+docker build -t viir-web .
+```
+
+Run it with your data directory mounted:
+
+```bash
+docker run -p 8080:8080 \
+  -v /path/to/data:/data \
+  -m 32g --cpus 8 \
+  viir-web
+```
+
+Then open `http://localhost:8080` in your browser to upload a YAML
+configuration or FASTQ list and start the pipeline. Results will be
+written inside the mounted `/path/to/data` folder.
+
+When processing large NGS datasets you may want to increase the memory
+(`-m`) and CPU (`--cpus`) options to match the size of your data.

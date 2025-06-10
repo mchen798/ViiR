@@ -34,8 +34,8 @@ class Params(object):
                 config_dict = yaml.safe_load(f)
 
             if 'out' not in config_dict or not config_dict['out']:
-                timestamp = datetime.now().strftime(\"%Y%m%d_%H%M%S\")
-                config_dict['out'] = f\"output/run_{timestamp}\"
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                config_dict['out'] = f"output/run_{timestamp}"
 
             # After loading config_dict
             valid_keys = {a.dest for a in parser._actions if a.dest != 'help'}

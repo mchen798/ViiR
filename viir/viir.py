@@ -23,16 +23,16 @@ class ViiR(object):
         self.args = args
 
     def normalize_paths(self):
-    config_path = getattr(self.args, "config", None)
-    base_dir = os.path.dirname(config_path) if config_path else os.getcwd()
+        config_path = getattr(self.args, "config", None)
+        base_dir = os.path.dirname(config_path) if config_path else os.getcwd()
 
-    self.args.fastq_list = make_path_absolute(self.args.fastq_list, base_dir)
-    if self.args.adapter != "Default_adapter":
-        self.args.adapter = make_path_absolute(self.args.adapter, base_dir)
-    if self.args.pfam != "Default_list":
-        self.args.pfam = make_path_absolute(self.args.pfam, base_dir)
-    if self.args.blastndb != "Default_db":
-        self.args.blastndb = make_path_absolute(self.args.blastndb, base_dir)
+        self.args.fastq_list = make_path_absolute(self.args.fastq_list, base_dir)
+        if self.args.adapter != "Default_adapter":
+            self.args.adapter = make_path_absolute(self.args.adapter, base_dir)
+        if self.args.pfam != "Default_list":
+            self.args.pfam = make_path_absolute(self.args.pfam, base_dir)
+        if self.args.blastndb != "Default_db":
+            self.args.blastndb = make_path_absolute(self.args.blastndb, base_dir)
 
     def prepare_output_directory(self):
         os.makedirs(self.args.out, exist_ok=True)

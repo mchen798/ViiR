@@ -20,12 +20,12 @@ function download_if_not_exist() {
     local url="$2"
     local target_path="$3"
 
-    if [ -f "./${filename}" ]; then
-        cp "./${filename}" "$target_path"
-        echo "📁 Use local file: ./${filename} → ${target_path}"
-    elif [ -f "../${filename}" ]; then
-        cp "../${filename}" "$target_path"
-        echo "📁 Use ../Local file: ../${filename} → ${target_path}"
+    if [ -f "./${local_path}" ]; then
+        cp "./${local_path}" "$target_path"
+        echo "📁 Use local file: ./${local_path} → ${target_path}"
+    elif [ -f "../${local_path}" ]; then
+        cp "../${local_path}" "$target_path"
+        echo "📁 Use ../Local file: ../${local_path} → ${target_path}"
     else
         wget "$url" -O "$target_path"
         echo "🌐 Download file: $url → $target_path"
