@@ -48,4 +48,66 @@ function renderChart() {
     });
 }
 
+// <<<<<<< 653gxq-codex/设计科研人员网页并提供mock功能
+function renderDEChart() {
+    const canvas = document.getElementById('de-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const labels = ['gene1', 'gene2', 'gene3', 'gene4', 'gene5'];
+    const data = [5, 12, 8, 3, 9];
+    const width = canvas.width / data.length;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#e17055';
+    data.forEach((val, i) => {
+        const x = i * width + 10;
+        const y = canvas.height - val * 5;
+        const h = val * 5;
+        ctx.fillRect(x, y, width - 20, h);
+        ctx.fillText(labels[i], x + (width - 20) / 2 - 10, canvas.height - 5);
+    });
+}
+
+function resetPipelineSteps() {
+    document.querySelectorAll('#pipeline-steps li').forEach(li => {
+        li.classList.remove('done');
+        li.classList.add('pending');
+    });
+}
+
+function markPipelineDone() {
+    document.querySelectorAll('#pipeline-steps li').forEach(li => {
+        li.classList.remove('pending');
+        li.classList.add('done');
+    });
+}
+
 document.addEventListener('DOMContentLoaded', renderChart);
+
+// Submit pipeline run via AJAX
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('run-form');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const outputPre = document.getElementById('run-output');
+        resetPipelineSteps();
+        outputPre.textContent = 'Running...';
+        const formData = new FormData(form);
+        try {
+            const resp = await fetch('/runner', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await resp.json();
+            outputPre.textContent = data.output || 'No output';
+            markPipelineDone();
+            renderDEChart();
+        } catch (err) {
+            outputPre.textContent = 'Failed to start job.';
+        }
+    });
+});
+// =======
+// document.addEventListener('DOMContentLoaded', renderChart);
+// >>>>>>> connector_dev

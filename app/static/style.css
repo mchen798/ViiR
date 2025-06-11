@@ -63,6 +63,25 @@ input[type="file"], textarea, input[type="text"] {
     border-radius: 4px;
 }
 
+/* <<<<<<< 653gxq-codex/设计科研人员网页并提供mock功能 */
+#run-output {
+    white-space: pre-wrap;
+    background: #f9f9f9;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+#pipeline-steps li.pending::before {
+    content: '\23F3';
+    margin-right: 5px;
+}
+
+#pipeline-steps li.done::before {
+    content: '\2705';
+    margin-right: 5px;
+}
+
 @media (max-width: 600px) {
     nav {
         flex-direction: column;

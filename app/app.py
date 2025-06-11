@@ -1,4 +1,17 @@
-from flask import Flask, request, render_template, render_template_string, redirect, url_for
+# <<<<<<< 653gxq-codex/设计科研人员网页并提供mock功能
+from flask import (
+    Flask,
+    request,
+    render_template,
+    render_template_string,
+    redirect,
+    url_for,
+    jsonify,
+)
+# =======
+
+# from flask import Flask, request, render_template, render_template_string, redirect, url_for
+# >>>>>>> connector_dev
 import os
 import subprocess
 import uuid
@@ -22,7 +35,12 @@ HTML_FORM = """
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+# <<<<<<< 653gxq-codex/mock
+    uid = uuid.uuid4().hex[:8]
+    return render_template('index.html', uuid=uid)
+# =======
+#     return render_template('index.html')
+# >>>>>>> connector_dev
 
 @app.route('/runner', methods=['GET', 'POST'])
 def runner():
@@ -55,6 +73,8 @@ def runner():
             output = proc.stdout + '\n' + proc.stderr
         except subprocess.CalledProcessError as e:
             output = e.stdout + '\n' + e.stderr
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'output': output, 'uid': uid})
 
     return render_template_string(HTML_FORM, output=output, uid=uid)
 

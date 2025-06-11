@@ -15,6 +15,7 @@
                 <a href="#analysis">Data Analysis</a>
                 <a href="#visualize">Visualization</a>
                 <a href="#notes">Notes</a>
+                <a href="#pipeline">Pipeline</a>
                 <a href="#upload">Upload</a>
             </nav>
         </div>
@@ -43,6 +44,31 @@
         <textarea id="note-text" rows="3" placeholder="Add a note..."></textarea>
         <button class="btn" onclick="addNote()">Add Note</button>
         <ul id="notes"></ul>
+    </section>
+
+    <section id="pipeline" class="container">
+        <h2>Run Pipeline</h2>
+        <p>The <code>run_viir.sh</code> workflow is divided into these stages:</p>
+        <ol id="pipeline-steps">
+            <li>Trim reads with Trimmomatic</li>
+            <li>Assemble transcripts using Trinity</li>
+            <li>Estimate abundance and run DESeq2</li>
+            <li>Scan Pfam profiles with HMMER</li>
+            <li>Detect rRNA sequences via barrnap</li>
+            <li>Count k-mers in significant isoforms</li>
+            <li>Search assembled contigs with BLASTN</li>
+        </ol>
+        <form id="run-form" enctype="multipart/form-data">
+            <input type="file" name="config" accept=".yaml">
+            <span>or FASTQ list:</span>
+            <input type="file" name="fastq_list">
+            <input type="text" name="out" placeholder="Output directory" value="run_{{ uuid }}">
+            <button class="btn" type="submit">Start</button>
+        </form>
+        <div id="pipeline-results">
+            <canvas id="de-chart" width="400" height="200"></canvas>
+        </div>
+        <pre id="run-output"></pre>
     </section>
 
     <section id="upload" class="container">
