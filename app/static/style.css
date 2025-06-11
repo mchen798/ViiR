@@ -63,6 +63,7 @@ input[type="file"], textarea, input[type="text"] {
     border-radius: 4px;
 }
 
+/* <<<<<<< 653gxq-codex/设计科研人员网页并提供mock功能 */
 #run-output {
     white-space: pre-wrap;
     background: #f9f9f9;
