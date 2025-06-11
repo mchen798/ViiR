@@ -1,0 +1,70 @@
+/* Basic styling for ViiR web prototype */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+    color: #333;
+}
+
+header {
+    background: #4B6584;
+    color: white;
+    padding: 10px 20px;
+}
+
+nav {
+    display: flex;
+    gap: 20px;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+section {
+    padding: 20px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+}
+
+.btn {
+    background: #3867d6;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: #274b9e;
+}
+
+input[type="file"], textarea, input[type="text"] {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 8px;
+}
+
+#results {
+    white-space: pre-wrap;
+    background: #f2f2f2;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+@media (max-width: 600px) {
+    nav {
+        flex-direction: column;
+    }
+}
