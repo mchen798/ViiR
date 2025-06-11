@@ -7,6 +7,7 @@ from flask import (
     url_for,
     jsonify,
 )
+
 import os
 import subprocess
 import uuid
@@ -32,6 +33,7 @@ HTML_FORM = """
 def home():
     uid = uuid.uuid4().hex[:8]
     return render_template('index.html', uuid=uid)
+
 
 @app.route('/runner', methods=['GET', 'POST'])
 def runner():

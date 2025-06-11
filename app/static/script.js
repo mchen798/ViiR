@@ -48,6 +48,7 @@ function renderChart() {
     });
 }
 
+
 function renderDEChart() {
     const canvas = document.getElementById('de-chart');
     if (!canvas) return;
@@ -107,3 +108,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
