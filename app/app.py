@@ -1,11 +1,11 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template, render_template_string, redirect, url_for
 import os
 import subprocess
 import uuid
 
 UPLOAD_DIR = os.environ.get("VIIR_UPLOAD_DIR", "/data")
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 
 HTML_FORM = """
 <!doctype html>
@@ -20,8 +20,12 @@ HTML_FORM = """
 <pre>{{output}}</pre>
 """
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/runner', methods=['GET', 'POST'])
+def runner():
     output = ''
     uid = uuid.uuid4().hex[:8]
     if request.method == 'POST':
@@ -53,6 +57,18 @@ def index():
             output = e.stdout + '\n' + e.stderr
 
     return render_template_string(HTML_FORM, output=output, uid=uid)
+
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    file = request.files.get('file')
+    if not file or not file.filename:
+        return redirect(url_for('home'))
+    uid = uuid.uuid4().hex[:8]
+    job_dir = os.path.join(UPLOAD_DIR, uid)
+    os.makedirs(job_dir, exist_ok=True)
+    file.save(os.path.join(job_dir, file.filename))
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
