@@ -48,7 +48,7 @@ function renderChart() {
     });
 }
 
-// <<<<<<< 653gxq-codex/设计科研人员网页并提供mock功能
+
 function renderDEChart() {
     const canvas = document.getElementById('de-chart');
     if (!canvas) return;
@@ -108,6 +108,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-// =======
-// document.addEventListener('DOMContentLoaded', renderChart);
-// >>>>>>> connector_dev
+

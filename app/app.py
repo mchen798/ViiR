@@ -1,4 +1,3 @@
-# <<<<<<< 653gxq-codex/设计科研人员网页并提供mock功能
 from flask import (
     Flask,
     request,
@@ -8,10 +7,7 @@ from flask import (
     url_for,
     jsonify,
 )
-# =======
 
-# from flask import Flask, request, render_template, render_template_string, redirect, url_for
-# >>>>>>> connector_dev
 import os
 import subprocess
 import uuid
@@ -35,12 +31,9 @@ HTML_FORM = """
 
 @app.route('/')
 def home():
-# <<<<<<< 653gxq-codex/mock
     uid = uuid.uuid4().hex[:8]
     return render_template('index.html', uuid=uid)
-# =======
-#     return render_template('index.html')
-# >>>>>>> connector_dev
+
 
 @app.route('/runner', methods=['GET', 'POST'])
 def runner():
