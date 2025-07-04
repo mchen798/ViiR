@@ -16,24 +16,29 @@ BLASTNDB_FASTA=$9
 
 ########################### Function ####################################
 function download_if_not_exist() {
-    local local_path="$1"
+    local rel_path="$1"
     local url="$2"
-    local target_path="$3"
+    local dest="$3"
 
-    if [ -f "./${local_path}" ]; then
-        cp "./${local_path}" "$target_path"
-        echo "📁 Use local file: ./${local_path} → ${target_path}"
-    elif [ -f "../${local_path}" ]; then
-        cp "../${local_path}" "$target_path"
-        echo "📁 Use ../Local file: ../${local_path} → ${target_path}"
+    if [ -n "$RES_DIR" ] && [ -f "$RES_DIR/$rel_path" ]; then
+        cp "$RES_DIR/$rel_path" "$dest"
+        echo "📁 Use local file: $RES_DIR/$rel_path → $dest"
+    elif [ -f "$rel_path" ]; then
+        cp "$rel_path" "$dest"
+        echo "📁 Use local file: $rel_path → $dest"
+    elif [ -f "../$rel_path" ]; then
+        cp "../$rel_path" "$dest"
+        echo "📁 Use ../local file: ../$rel_path → $dest"
     else
-        wget "$url" -O "$target_path"
-        echo "🌐 Download file: $url → $target_path"
+        wget "$url" -O "$dest"
+        echo "🌐 Download file: $url → $dest"
     fi
 }
 ##################################################################
 BASE_URL="https://raw.githubusercontent.com/YuSugihara/ViiR/master"
 
+RES_DIR="${VIIR_RESOURCES:-$(dirname "$(realpath "$0")")}"
+DB_CACHE_DIR="${VIIR_DB_CACHE:-$HOME/.viir_db}"
 
 if [ ${ADAPTER_FASTA} != "Default_adapter" ]
 then
@@ -50,11 +55,9 @@ mkdir -p ${OUT_DIR}/00_fastq
 if [ ${ADAPTER_FASTA} = "Default_adapter" ]
 then
 
-    download_if_not_exist "adapters.fasta" \
+    download_if_not_exist "example/adapters.fasta" \
         "${BASE_URL}/example/adapters.fasta" \
         "${OUT_DIR}/00_fastq/adapter.fasta"
-    # wget "${BASE_URL}/example/adapters.fasta \  
-    #      -O ${OUT_DIR}/00_fastq/adapter.fasta
 
     ADAPTER_FASTA=${OUT_DIR}/00_fastq/adapter.fasta
 
@@ -377,10 +380,9 @@ cd ${OUT_DIR}/50_hmmer
 if [ ${PFAM_ID_LIST} = "Default_list" ]
 then
 
-    # download_if_not_exist "Pfam_IDs_list.txt" \
-    #     "${BASE_URL}/example/Pfam_IDs_list.txt" \
-    #     "${OUT_DIR}/50_hmmer/Pfam_IDs_list.txt"
-    wget "${BASE_URL}/example/Pfam_IDs_list.txt
+    download_if_not_exist "example/Pfam_IDs_list.txt" \
+        "${BASE_URL}/example/Pfam_IDs_list.txt" \
+        "${OUT_DIR}/50_hmmer/Pfam_IDs_list.txt"
 
     PFAM_ID_LIST=${OUT_DIR}/50_hmmer/Pfam_IDs_list.txt
 
@@ -392,12 +394,9 @@ do
 
     mkdir -p ${OUT_DIR}/50_hmmer/${PFAM_ID}
 
-    # download_if_not_exist "/hmm_models/${PFAM_ID}.hmm" \
-    #     "${BASE_URL}/hmm_models/${PFAM_ID}.hmm" \
-    #     "${OUT_DIR}/50_hmmer/${PFAM_ID}/${PFAM_ID}.hmm"
-
-    wget "${BASE_URL}/hmm_models/${PFAM_ID}.hmm \
-         -O ${PFAM_ID}/${PFAM_ID}.hmm
+    download_if_not_exist "hmm_models/${PFAM_ID}.hmm" \
+        "${BASE_URL}/hmm_models/${PFAM_ID}.hmm" \
+        "${PFAM_ID}/${PFAM_ID}.hmm"
 
 
     hmmpress ${PFAM_ID}/${PFAM_ID}.hmm
@@ -448,8 +447,9 @@ get_hmmscan_fasta all_hmmscan.isoform_list.txt "TRUE"
 get_hmmscan_fasta all_hmmscan.cooksCutoff_FALSE.isoform_list.txt  "FALSE"
 
 
-wget "${BASE_URL}/utils/generate_summary.py \
-     -O ${OUT_DIR}/generate_summary.py
+download_if_not_exist "utils/generate_summary.py" \
+        "${BASE_URL}/utils/generate_summary.py" \
+        "${OUT_DIR}/generate_summary.py"
 
 cd ${OUT_DIR}
 
@@ -539,8 +539,9 @@ python3 ${OUT_DIR}/generate_summary.py ${OUT_DIR}/70_barrnap > ${OUT_DIR}/70_bar
 
 mkdir -p ${OUT_DIR}/80_kmer/isoform_list
 
-wget "${BASE_URL}/utils/count_kmers.py \
-     -O ${OUT_DIR}/count_kmers.py
+download_if_not_exist "utils/count_kmers.py" \
+        "${BASE_URL}/utils/count_kmers.py" \
+        "${OUT_DIR}/count_kmers.py"
 
 for KMER in 100 150 200
 do
@@ -575,12 +576,16 @@ cd ${OUT_DIR}/90_blastn/blastndb
 
 if [ ${BLASTNDB_FASTA} = "Default_db" ]
 then
-  git clone https://github.com/YuSugihara/ViiR_DB.git
-  cd ViiR_DB
-  cat ./NCBI_Virus_RefSeq_nuc-23-01-23.*.fasta.gz > ../NCBI_Virus_RefSeq_nuc-23-01-23.fasta.gz
-  cd ..
-  gzip -d NCBI_Virus_RefSeq_nuc-23-01-23.fasta.gz
-  BLASTNDB_FASTA=${OUT_DIR}/90_blastn/blastndb/NCBI_Virus_RefSeq_nuc-23-01-23.fasta
+  mkdir -p "${DB_CACHE_DIR}"
+  CACHED_FASTA="${DB_CACHE_DIR}/NCBI_Virus_RefSeq_nuc-23-01-23.fasta"
+  if [ ! -f "$CACHED_FASTA" ]; then
+    git clone https://github.com/YuSugihara/ViiR_DB.git "${DB_CACHE_DIR}/ViiR_DB"
+    cat ${DB_CACHE_DIR}/ViiR_DB/NCBI_Virus_RefSeq_nuc-23-01-23.*.fasta.gz > "$CACHED_FASTA.gz"
+    gzip -d "$CACHED_FASTA.gz"
+    rm -rf "${DB_CACHE_DIR}/ViiR_DB"
+  fi
+  ln -s "$CACHED_FASTA"
+  BLASTNDB_FASTA="$CACHED_FASTA"
 else
   ln -s ${BLASTNDB_FASTA}
 fi
@@ -611,12 +616,6 @@ fi
 
 rm -rf ${OUT_DIR}/90_blastn/blastndb/*.fasta.*
 cd ${OUT_DIR}/90_blastn/blastndb
-if [ ${BLASTNDB_FASTA} = "Default_db" ]
-then
-  rm -rf ${BLASTNDB_FASTA}
-  BLASTNDB_FASTA=${OUT_DIR}/90_blastn/blastndb/adapter.fasta
-else
-  unlink `basename ${BLASTNDB_FASTA}`
-fi
+unlink `basename ${BLASTNDB_FASTA}`
 cd ..
 rm -rf blastndb
