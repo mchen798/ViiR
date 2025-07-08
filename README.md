@@ -1,81 +1,43 @@
-# ViiR User Guide
 
-ViiR identifies viral sequences without relying on a reference genome. The
-pipeline combines Trinity assembly, differential expression analysis and several
-annotation steps. Version 0.0.2 packages the helper scripts and HMM models with
-the tool so an internet connection is only required the first time the BLASTn
-reference database is downloaded.
+# ViiR
 
-## Installation
+ViiR (Virus Identification Independent of Reference sequences) assembles and annotates viral reads from RNA-Seq data. The pipeline combines Trinity, differential expression analysis and several annotation steps.
 
-ViiR is distributed as a Python package. We recommend creating a fresh conda
-environment with the required bioinformatics tools:
+## Requirements
+- [Docker](https://docs.docker.com/get-docker/) installed on your system.
+
+## Build the Docker image
+Clone the repository and build the image:
 
 ```bash
-conda create -n viir -c bioconda trinity hmmer wget samtools biopython barrnap
-conda activate viir
-conda install -c bioconda rsem bioconductor-deseq2 bioconductor-edger r blast
 git clone https://github.com/YuSugihara/ViiR.git
 cd ViiR
-pip install .
+docker build -t viir .
 ```
 
-The first run will fetch a viral BLAST database (~9 MB) and store it under
-`~/.viir_db`. Subsequent executions reuse this cache.
-
-## Basic Usage
-
-```
-viir -l <FASTQ_LIST> -o <OUT_DIR> [options]
-```
-
-Common options:
-
-- `-t / --threads` – number of CPU threads (default: 16)
-- `--max-memory` – memory for Trinity (default: 32G)
-- `--SS-lib-type` – strand specificity (`No`, `FR` or `RF`)
-- `--adapter` – FASTA of adapter sequences. If omitted the bundled example set
-  is used.
-- `--pfam` – list of Pfam IDs. Defaults to the bundled list.
-- `--blastndb` – FASTA for BLAST annotation. Defaults to the cached reference.
-
-### YAML Configuration
-
-Parameters can also be supplied in a YAML file:
-
-```yaml
-fastq-list: path/to/sample_list.txt
-out: output/run1
-threads: 32
-pvalue: 0.01
-```
-
-Run with:
+## Running ViiR
+### Web interface
+Run the container with a directory containing your FASTQ files mounted under `/data`:
 
 ```bash
-viir --config config.yaml
-```
-
-Command line arguments override values in the configuration file.
-
-## Output
-
-All pipeline steps run inside the specified output directory. `config_used.yaml`
-and a copy of `run_viir.sh` are saved for reproducibility. Intermediate files are
-placed in numbered subdirectories (10_trinity, 40_DEGseq2, …). At the end the
-pipeline reports summary tables of detected Pfam domains, rRNAs and k‑mers.
-
-## Docker Web Interface
-
-A lightweight Docker image is provided for running ViiR with a small web front
-end. Build and run it with your data directory mounted:
-
-```bash
-docker build -t viir-web .
 docker run -p 8080:8080 \
   -v /path/to/data:/data \
-  viir-web
+  viir
 ```
 
-Navigate to `http://localhost:8080` to upload a configuration file and start the
-analysis. Results are written inside the mounted data directory.
+Open `http://localhost:8080` in your browser to upload a FASTQ list or YAML configuration file and start an analysis. Results are written inside the mounted directory.
+
+### Command-line usage
+You can also execute the pipeline directly from the command line. Mount a data directory and override the container entrypoint:
+
+```bash
+docker run --rm \
+  -v /path/to/data:/data \
+  --entrypoint micromamba \
+  viir run -n viir viir -l /data/sample_list.txt -o /data/out
+```
+
+The image includes example adapter sequences, Pfam lists and HMM models. On the first run a small BLAST database (~9&nbsp;MB) is downloaded and cached under `/root/.viir_db`. Set `VIIR_DB_CACHE` to change this location. The `VIIR_RESOURCES` variable can point to alternate resource files if needed.
+
+## Output
+All results are written to the specified output directory. `config_used.yaml` and a copy of `run_viir.sh` are saved for reproducibility. Intermediate files are placed in numbered folders (10_trinity, 40_DEGseq2, ...). Summary tables of Pfam domains, rRNAs and k‑mers are produced at the end of the run.
