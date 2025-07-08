@@ -1,3 +1,4 @@
+
 # ViiR
 
 ViiR (Virus Identification Independent of Reference sequences) assembles and annotates viral reads from RNA-Seq data. The pipeline combines Trinity, differential expression analysis and several annotation steps.
@@ -40,4 +41,3 @@ The image includes example adapter sequences, Pfam lists and HMM models. On the 
 
 ## Output
 All results are written to the specified output directory. `config_used.yaml` and a copy of `run_viir.sh` are saved for reproducibility. Intermediate files are placed in numbered folders (10_trinity, 40_DEGseq2, ...). Summary tables of Pfam domains, rRNAs and k‑mers are produced at the end of the run.
-
