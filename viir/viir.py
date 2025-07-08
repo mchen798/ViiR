@@ -52,6 +52,7 @@ class ViiR(object):
             if os.path.isfile(candidate):
                 shutil.copy(candidate, run_sh_target)
                 print(f"[INFO] Copied {run_sh_name} from {candidate}")
+                self.copy_resources(os.path.dirname(candidate))
                 return run_sh_target
 
         print(f"[INFO] Downloading {run_sh_name} from GitHub...")
@@ -59,6 +60,21 @@ class ViiR(object):
         cmd = f"wget {url} -O {run_sh_target}"
         sbp.run(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, check=True)
         return run_sh_target
+
+    def copy_resources(self, root_dir):
+        for d in ["hmm_models", "utils"]:
+            src = os.path.join(root_dir, d)
+            dst = os.path.join(self.args.out, d)
+            if os.path.isdir(src) and not os.path.exists(dst):
+                shutil.copytree(src, dst)
+
+        files = {
+            os.path.join(root_dir, "example", "adapters.fasta"): os.path.join(self.args.out, "adapters.fasta"),
+            os.path.join(root_dir, "example", "Pfam_IDs_list.txt"): os.path.join(self.args.out, "Pfam_IDs_list.txt"),
+        }
+        for src, dst in files.items():
+            if os.path.isfile(src) and not os.path.exists(dst):
+                shutil.copy(src, dst)
 
     def run_pipeline(self, script_path):
         cmd = [
@@ -68,7 +84,10 @@ class ViiR(object):
             self.args.SS_lib_type, self.args.adapter, self.args.blastndb
         ]
         print(cmd, file=sys.stderr, flush=True)
-        sbp.run(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, check=True)
+        env = os.environ.copy()
+        env.setdefault('VIIR_RESOURCES', self.args.out)
+        env.setdefault('VIIR_DB_CACHE', os.path.join(os.path.expanduser('~'), '.viir_db'))
+        sbp.run(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True, check=True, env=env)
 
     def run(self):
         self.prepare_output_directory()
