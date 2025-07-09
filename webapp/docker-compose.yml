@@ -4,7 +4,9 @@ services:
     build: ./backend
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
+
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
     depends_on:
       - redis
     ports:
@@ -14,7 +16,9 @@ services:
     command: celery -A tasks worker --loglevel=info
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
+
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
     depends_on:
       - redis
   frontend:

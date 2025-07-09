@@ -44,7 +44,9 @@ All results are written to the specified output directory. `config_used.yaml` an
 
 ## Development Web Application
 
+
 A demonstration web application using FastAPI, React and Celery is provided in the `webapp` directory. It now features a navigation bar, multi-step task wizard and pages for task history and progress. Run all services with Docker Compose:
+
 
 ```bash
 cd webapp

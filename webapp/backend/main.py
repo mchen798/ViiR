@@ -1,10 +1,13 @@
 from fastapi import FastAPI
+
 from fastapi.middleware.cors import CORSMiddleware
+
 from pydantic import BaseModel
 from celery import Celery
 import os
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,6 +20,7 @@ CELERY_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", CELERY_BROKER)
 celery_app = Celery('worker', broker=CELERY_BROKER, backend=CELERY_BACKEND)
 tasks = {}
 sample_log = "Running analysis...\nStep 1 completed\nStep 2 completed"
+
 
 class DataResponse(BaseModel):
     x: list
@@ -58,4 +62,5 @@ def task_status(task_id: str):
 def task_log(task_id: str):
     # Return sample log lines. In real deployment this would stream task logs
     return {"log": sample_log}
+
 
