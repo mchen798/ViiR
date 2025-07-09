@@ -1,35 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { Layout, Button } from 'antd';
-import axios from 'axios';
-import DataChart from './components/DataChart';
 
-interface ChartData {
-  x: number[];
-  y: number[];
-}
+import React from 'react';
+import { Layout } from 'antd';
+import { Route, Routes } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Dashboard from './pages/Dashboard';
+import NewTask from './pages/NewTask';
+import TaskList from './pages/TaskList';
+import TaskProgress from './pages/TaskProgress';
+import HelpCenter from './pages/HelpCenter';
 
-const { Header, Content } = Layout;
+const { Content } = Layout;
 
-function App() {
-  const [data, setData] = useState<ChartData>({ x: [], y: [] });
-
-  useEffect(() => {
-    axios.get('/data').then(res => setData(res.data));
-  }, []);
-
-  const triggerTask = () => {
-    axios.post('/process');
-  };
-
-  return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ color: 'white' }}>ViiR Dashboard</Header>
-      <Content style={{ padding: '2rem' }}>
-        <Button type="primary" onClick={triggerTask}>Run Background Task</Button>
-        <DataChart data={data} />
-      </Content>
-    </Layout>
-  );
-}
+const App: React.FC = () => (
+  <Layout style={{ minHeight: '100vh' }}>
+    <Navbar />
+    <Content style={{ padding: '2rem' }}>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/new" element={<NewTask />} />
+        <Route path="/tasks" element={<TaskList />} />
+        <Route path="/tasks/:id" element={<TaskProgress />} />
+        <Route path="/help" element={<HelpCenter />} />
+      </Routes>
+    </Content>
+  </Layout>
+);
 
 export default App;
