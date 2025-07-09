@@ -51,3 +51,7 @@ run_viir_original.sh
 run_viir_QIU.sh
 # Temporary files
 build/
+# Webapp
+webapp/frontend/node_modules/
+webapp/frontend/build/
+webapp/backend/__pycache__/

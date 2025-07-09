@@ -41,3 +41,14 @@ The image includes example adapter sequences, Pfam lists and HMM models. On the 
 
 ## Output
 All results are written to the specified output directory. `config_used.yaml` and a copy of `run_viir.sh` are saved for reproducibility. Intermediate files are placed in numbered folders (10_trinity, 40_DEGseq2, ...). Summary tables of Pfam domains, rRNAs and k‑mers are produced at the end of the run.
+
+## Development Web Application
+
+A simple demo web application using FastAPI, React and Celery is available in the `webapp` directory. Run all services with Docker Compose:
+
+```bash
+cd webapp
+docker-compose up --build
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view the frontend.
