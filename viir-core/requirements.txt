@@ -1,0 +1,10 @@
+Bio==1.8.0
+PyYAML==6.0.2
+fastapi
+uvicorn
+celery
+redis
+pydantic
+biopython
+numpy
+pandas
