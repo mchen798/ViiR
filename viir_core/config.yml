@@ -1,0 +1,9 @@
+paths:
+  input_dir: data/input
+  output_dir: data/output
+resources:
+  threads: 4
+  memory_gb: 16
+thresholds:
+  kmers_min_count: 2
+  hmmscan_evalue: 1e-5
