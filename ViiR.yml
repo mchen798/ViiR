@@ -2,8 +2,7 @@ name: ViiR
 channels:
   - conda-forge
   - bioconda
-  - anaconda
-  - defaults
+channel_priority: strict
 dependencies:
   - trinity=2.13.2
   - hmmer=3.3.2

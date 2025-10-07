@@ -1,0 +1,24 @@
+# .dockerignore
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.o
+*.a
+build/
+dist/
+*.egg-info/
+.env
+.venv/
+.conda/
+.mamba/
+*.ipynb_checkpoints/
+data/
+datasets/
+logs/
+tmp/
+.DS_Store
+node_modules/

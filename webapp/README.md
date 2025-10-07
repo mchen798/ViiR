@@ -22,8 +22,10 @@ history table and progress pages.
 From this `webapp` directory, run:
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
+
+```Take care of docker version, for docker 1 docker-compose```
 
 Then open `http://localhost:3000` to view the frontend.
 
