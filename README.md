@@ -10,7 +10,8 @@ ViiR (Virus Identification Independent of Reference sequences) assembles and ann
 Clone the repository and build the image:
 
 ```bash
-git clone https://github.com/YuSugihara/ViiR.git
+git clone https://github.com/mchen798/ViiR.git
+git checkout connector_dev
 cd ViiR
 docker build -t viir .
 ```
