@@ -1,0 +1,6 @@
+N fastq/N0_1.fq.gz fastq/N0_2.fq.gz
+N fastq/N1_1.fq.gz fastq/N1_2.fq.gz
+N fastq/N2_1.fq.gz fastq/N2_2.fq.gz
+V fastq/V3_1.fq.gz fastq/V3_2.fq.gz
+V fastq/V4_1.fq.gz fastq/V4_2.fq.gz
+V fastq/V5_1.fq.gz fastq/V5_2.fq.gz
