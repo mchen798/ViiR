@@ -71,7 +71,7 @@ COPY adapters.fasta        /opt/viir/resources/adapters.fasta
 
 # 拷入 bash 运行脚本（已验证可用）
 # COPY ./run_viir_QIU_v4.sh /usr/local/bin/viir
-COPY ./run_viir_QIU_v6.sh /usr/local/bin/viir
+COPY ./run_viir_Q.sh /usr/local/bin/viir
 RUN chmod +x /usr/local/bin/viir
 
 

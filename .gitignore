@@ -57,4 +57,4 @@ webapp/frontend/build/
 webapp/backend/__pycache__/
 
 
-run_viir_QIU_v*
+run_viir_QIU_v*.sh
