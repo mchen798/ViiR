@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Web-ViiR | Minimal UI</title>
+  <style>
+    :root { --bg:#0b1020; --card:#131a2a; --ink:#e7eaf6; --muted:#9aa3ba; --pri:#6aa6ff; }
+    *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    a{color:var(--pri);text-decoration:none}
+    header{position:sticky;top:0;background:rgba(11,16,32,.8);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid #1c2742;z-index:5}
+    header .wrap{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px}
+    h1{font-size:18px;margin:0}
+    main{max-width:1100px;margin:0 auto;padding:18px;display:grid;gap:16px}
+    .card{background:var(--card);border:1px solid #1c2742;border-radius:12px;padding:16px}
+    .grid{display:grid;gap:12px}
+    .g-2{grid-template-columns: repeat(2, minmax(0,1fr))}
+    .g-3{grid-template-columns: repeat(3, minmax(0,1fr))}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    label{display:block;font-weight:600;margin-bottom:6px;color:var(--muted)}
+    input[type="text"], input[type="number"], select, textarea{
+      width:100%;padding:10px 12px;border-radius:10px;border:1px solid #273253;background:#0e1527;color:var(--ink);
+    }
+    input[type="file"]{color:var(--muted)}
+    textarea{min-height:120px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:12px}
+    .btn{background:linear-gradient(180deg,#6aa6ff,#4f86e6);border:0;color:white;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .btn.subtle{background:#1c2742}
+    .bad{color:#ff8b8b}
+    .ok{color:#8bffa6}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    pre{margin:0;white-space:pre-wrap;word-break:break-word;background:#0d1425;border:1px solid #273253;border-radius:10px;padding:10px}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1c2742;color:#dfe7ff}
+    .divider{height:1px;background:#1c2742;margin:6px 0 2px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Web-ViiR (minimal)</h1>
+      <span id="health" class="pill">checking…</span>
+      <span id="status" class="pill">idle</span>
+      <div style="flex:1"></div>
+      <button class="btn subtle" id="btnRefresh" title="Refresh status/logs">Refresh</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 1) Data upload area -->
+    <section class="card">
+      <h2>1) Upload Data</h2>
+      <p class="mono" style="color:var(--muted)">
+        Files will be saved under <b>/workspace</b> in the container. You can reference these paths in <code>config.yaml</code>.
+      </p>
+      <div class="grid g-2">
+        <div>
+          <h3>Normal group</h3>
+          <label>R1 (FASTQ.gz)</label>
+          <input type="file" id="nR1" accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <label>R2 (FASTQ.gz, optional)</label>
+          <input type="file" id="nR2" accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <button class="btn" id="btnUpN">Upload Normal</button>
+          <div class="mono" id="nPaths" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+        <div>
+          <h3>Virus group</h3>
+          <label>R1 (FASTQ.gz)</label>
+          <input type="file" id="vR1" accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <label>R2 (FASTQ.gz, optional)</label>
+          <input type="file" id="vR2" accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <button class="btn" id="btnUpV">Upload Virus</button>
+          <div class="mono" id="vPaths" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="grid g-2">
+        <div>
+          <h3>Optional: Upload FASTQ list (advanced)</h3>
+          <input type="file" id="fastqList" accept=".txt"/>
+          <button class="btn subtle" id="btnUpList">Upload List</button>
+          <div class="mono" id="listPath" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+        <div>
+          <h3>Other files</h3>
+          <input type="file" id="otherFiles" multiple/>
+          <button class="btn subtle" id="btnUpOther">Upload</button>
+          <div class="mono" id="otherPaths" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2) Config options -->
+    <section class="card">
+      <h2>2) Configuration</h2>
+
+      <div class="grid g-2">
+        <div>
+          <label>Output directory (inside /workspace)</label>
+          <input type="text" id="outDir" value="viir_run_1"/>
+        </div>
+        <div>
+          <label>SS_lib_type</label>
+          <select id="ssType">
+            <option value="RF">RF</option>
+            <option value="FR">FR</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid g-2">
+        <div>
+          <label>NGS adapters</label>
+          <div class="row">
+            <label><input type="radio" name="adSel" value="default" checked/> Use default</label>
+            <label><input type="radio" name="adSel" value="custom"/> Custom</label>
+          </div>
+          <div class="mono" id="adDefault">/opt/viir/resources/adapters.fasta</div>
+          <div class="row" id="adCustomRow" style="display:none">
+            <input type="file" id="adCustomFile" accept=".fa,.fasta"/>
+            <button class="btn subtle" id="btnUpAd">Upload adapter</button>
+          </div>
+          <div class="mono" id="adPath" style="color:var(--muted)"></div>
+        </div>
+
+        <div>
+          <label>Pfam list</label>
+          <div class="row">
+            <label><input type="radio" name="pfSel" value="default" checked/> Use default</label>
+            <label><input type="radio" name="pfSel" value="custom"/> Custom</label>
+          </div>
+          <div class="mono" id="pfDefault">/opt/viir/resources/Pfam_IDs_list.txt</div>
+          <div class="row" id="pfCustomRow" style="display:none">
+            <input type="file" id="pfCustomFile" accept=".txt"/>
+            <button class="btn subtle" id="btnUpPf">Upload Pfam list</button>
+          </div>
+          <div class="mono" id="pfPath" style="color:var(--muted)"></div>
+        </div>
+      </div>
+
+      <div class="grid g-3">
+        <div>
+          <label>p-value</label>
+          <input type="number" id="pval" step="0.001" value="0.01" min="0" max="1"/>
+        </div>
+        <div>
+          <label>threads</label>
+          <input type="number" id="threads" value="16" min="1"/>
+        </div>
+        <div>
+          <label>max-memory</label>
+          <input type="text" id="maxMem" value="64G" placeholder="e.g. 64G"/>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="row">
+        <div>
+          <label>blastndb (default only)</label>
+          <div class="mono">/opt/viir/resources/ViiR_DB</div>
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn" id="btnGen">Generate config.yaml</button>
+      </div>
+
+      <div style="margin-top:8px">
+        <label>config.yaml preview</label>
+        <textarea id="cfg" readonly></textarea>
+      </div>
+    </section>
+
+    <!-- 3) Run & Monitor -->
+    <section class="card">
+      <h2>3) Run & Monitor</h2>
+      <div class="row">
+        <button class="btn" id="btnRun">Run</button>
+        <button class="btn subtle" id="btnPoll">Tail logs</button>
+        <button class="btn subtle" id="btnResults">List results</button>
+        <button class="btn" id="btnDownload">Download ZIP</button>
+      </div>
+      <div class="grid g-2" style="margin-top:10px">
+        <div>
+          <label>Status</label>
+          <pre id="statusBox" class="mono">idle</pre>
+        </div>
+        <div>
+          <label>Logs (last 10 lines)</label>
+          <pre id="logsBox" class="mono"></pre>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <label>Results</label>
+        <pre id="resultsBox" class="mono"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const el = id => document.getElementById(id);
+    const healthEl = el('health'), statusPill = el('status');
+
+    async function ping(){
+      try{
+        const r = await fetch('/healthz'); const t = await r.text();
+        healthEl.textContent = t.trim()==='ok' ? 'healthy' : 'unhealthy';
+        healthEl.className = 'pill ' + (t.trim()==='ok' ? 'ok':'bad');
+      }catch(e){ healthEl.textContent='down'; healthEl.className='pill bad'; }
+    }
+    ping();
+
+    // --- Upload helper ---
+    async function uploadFile(file){
+      const fd = new FormData(); fd.append('file', file, file.name);
+      const r = await fetch('/api/upload', { method:'POST', body: fd });
+      if(!r.ok) throw new Error('upload failed');
+      const j = await r.json();
+      return j.saved; // absolute path in /workspace
+    }
+
+    // state
+    const state = {
+      normal: { r1:null, r2:null },
+      virus : { r1:null, r2:null },
+      fastqList:null,
+      adapterPath:'/opt/viir/resources/adapters.fasta',
+      pfamPath:'/opt/viir/resources/Pfam_IDs_list.txt',
+      blastPath:'/opt/viir/resources/ViiR_DB',
+    };
+
+    // show/hide custom rows
+    function wireRadios(){
+      const adRadios = document.querySelectorAll('input[name="adSel"]');
+      const pfRadios = document.querySelectorAll('input[name="pfSel"]');
+      adRadios.forEach(r => r.onchange = ()=> {
+        document.getElementById('adCustomRow').style.display = (r.value==='custom' && r.checked) ? 'flex':'none';
+      });
+      pfRadios.forEach(r => r.onchange = ()=> {
+        document.getElementById('pfCustomRow').style.display = (r.value==='custom' && r.checked) ? 'flex':'none';
+      });
+    }
+    wireRadios();
+
+    // Upload buttons
+    el('btnUpN').onclick = async ()=>{
+      const r1 = el('nR1').files[0]; const r2 = el('nR2').files[0];
+      if(!r1){ alert('Normal R1 is required'); return; }
+      el('btnUpN').disabled = true;
+      try{
+        const p1 = await uploadFile(r1);
+        state.normal.r1 = p1;
+        let msg = `R1 => ${p1}`;
+        if(r2){ const p2 = await uploadFile(r2); state.normal.r2 = p2; msg += `\nR2 => ${p2}`; }
+        el('nPaths').textContent = msg;
+      }catch(e){ alert(e.message); }
+      finally{ el('btnUpN').disabled=false; }
+    };
+
+    el('btnUpV').onclick = async ()=>{
+      const r1 = el('vR1').files[0]; const r2 = el('vR2').files[0];
+      if(!r1){ alert('Virus R1 is required'); return; }
+      el('btnUpV').disabled = true;
+      try{
+        const p1 = await uploadFile(r1);
+        state.virus.r1 = p1;
+        let msg = `R1 => ${p1}`;
+        if(r2){ const p2 = await uploadFile(r2); state.virus.r2 = p2; msg += `\nR2 => ${p2}`; }
+        el('vPaths').textContent = msg;
+      }catch(e){ alert(e.message); }
+      finally{ el('btnUpV').disabled=false; }
+    };
+
+    el('btnUpList').onclick = async ()=>{
+      const f = el('fastqList').files[0];
+      if(!f){ alert('Pick a .txt fastq list'); return; }
+      el('btnUpList').disabled = true;
+      try{
+        const saved = await uploadFile(f);
+        state.fastqList = saved;
+        el('listPath').textContent = saved;
+      }catch(e){ alert(e.message); }
+      finally{ el('btnUpList').disabled=false; }
+    };
+
+    el('btnUpOther').onclick = async ()=>{
+      const files = el('otherFiles').files;
+      if(!files.length){ alert('Pick files'); return; }
+      el('btnUpOther').disabled = true;
+      try{
+        let msgs = [];
+        for(const f of files){
+          const p = await uploadFile(f);
+          msgs.push(p);
+        }
+        el('otherPaths').textContent = msgs.join('\n');
+      }catch(e){ alert(e.message); }
+      finally{ el('btnUpOther').disabled=false; }
+    };
+
+    // Upload custom adapter / pfam
+    el('btnUpAd').onclick = async ()=>{
+      const f = el('adCustomFile').files[0];
+      if(!f){ alert('pick adapter fasta'); return; }
+      el('btnUpAd').disabled = true;
+      try{ state.adapterPath = await uploadFile(f); el('adPath').textContent = state.adapterPath; }
+      catch(e){ alert(e.message); }
+      finally{ el('btnUpAd').disabled = false; }
+    };
+    el('btnUpPf').onclick = async ()=>{
+      const f = el('pfCustomFile').files[0];
+      if(!f){ alert('pick Pfam list'); return; }
+      el('btnUpPf').disabled = true;
+      try{ state.pfamPath = await uploadFile(f); el('pfPath').textContent = state.pfamPath; }
+      catch(e){ alert(e.message); }
+      finally{ el('btnUpPf').disabled = false; }
+    };
+
+    // Helper: YAML escape (very lightweight)
+    function q(s){ if(s==null) return '""'; s=String(s); return s.match(/[:#\n]/)? JSON.stringify(s): s; }
+
+    // Generate config.yaml preview
+    el('btnGen').onclick = ()=>{
+      const out = el('outDir').value.trim() || 'viir_run_1';
+      const ss  = el('ssType').value;
+      const pval= Number(el('pval').value || 0.01);
+      const thr = Number(el('threads').value || 16);
+      const mem = el('maxMem').value.trim() || '64G';
+
+      // fastq-list：优先用户上传的 list；否则尝试根据已上传的 N/V 组合生成一个最小 list 文件路径
+      // —— 为了稳妥，默认仍然让用户上传现成的 fastq-list；这里仅在两组都具备R1时生成一个“临时清单路径”给出提示。
+      let fastqList = state.fastqList || '';
+      const lines = [];
+      if(state.normal.r1){ lines.push([state.normal.r1, state.normal.r2 || ''].filter(Boolean).join('\t')); }
+      if(state.virus.r1){  lines.push([state.virus.r1 , state.virus.r2  || ''].filter(Boolean).join('\t')); }
+      if(!fastqList && lines.length){
+        // 我们将建议用户用 /workspace/fastq_list.txt；真正写入文件会在“Run”时完成
+        fastqList = '/workspace/fastq_list.txt';
+      }
+
+      const yml = [
+        `out: /workspace/${out}`,
+        `fastq-list: ${q(fastqList)}`,
+        `threads: ${thr}`,
+        `adapter: ${q(state.adapterPath)}`,
+        `pfam: ${q(state.pfamPath)}`,
+        `hmm-folder: /opt/viir/resources/hmm_models`,
+        `SS-lib-type: ${q(ss)}`,
+        `blastndb: /opt/viir/resources/ViiR_DB`,
+        `pvalue: ${pval}`,
+        `max-memory: ${q(mem)}`
+      ].join('\n');
+
+      el('cfg').value = yml;
+    };
+
+    async function ensureFastqListIfNeeded(){
+      // 如果用户没上传 fastq-list，但我们已收集到 N/V 的 R1/R2，就生成文本并上传为 /workspace/fastq_list.txt
+      if(state.fastqList) return state.fastqList;
+      const pairs = [];
+      if(state.normal.r1) pairs.push([state.normal.r1, state.normal.r2].filter(Boolean).join('\t'));
+      if(state.virus.r1)  pairs.push([state.virus.r1 , state.virus.r2 ].filter(Boolean).join('\t'));
+      if(!pairs.length) return null;
+
+      const blob = new Blob([pairs.join('\n')+'\n'], {type:'text/plain'});
+      const file = new File([blob], 'fastq_list.txt', {type:'text/plain'});
+      const saved = await uploadFile(file);
+      state.fastqList = saved;
+      el('listPath').textContent = saved + ' (auto-generated)';
+      return saved;
+    }
+
+    // Run
+    el('btnRun').onclick = async ()=>{
+      try{
+        el('btnRun').disabled = true;
+        // 如果需要，自动生成 fastq_list.txt
+        await ensureFastqListIfNeeded();
+
+        // 从预览框拿内容，作为 file 字段上传到 /run
+        const cfgText = el('cfg').value.trim();
+        if(!cfgText){ alert('Please click "Generate config.yaml" first.'); el('btnRun').disabled=false; return; }
+
+        const blob = new Blob([cfgText], {type:'application/x-yaml'});
+        const file = new File([blob], 'config.yaml', {type:'application/x-yaml'});
+
+        const fd = new FormData(); fd.append('file', file, 'config.yaml');
+        const r = await fetch('/run', { method:'POST', body: fd });
+        const j = await r.json(); 
+        if(!r.ok){ alert('Run failed: ' + JSON.stringify(j)); }
+        else { statusPill.textContent='running'; tailLogs(); }
+      }catch(e){ alert(e.message); }
+      finally{ el('btnRun').disabled=false; }
+    };
+
+    // Tail logs
+    async function tailLogs(){
+      const s = await (await fetch('/status')).json();
+      el('statusBox').textContent = JSON.stringify(s, null, 2);
+      const t = await (await fetch('/logs?tail=10')).text();
+      el('logsBox').textContent = t || '(empty)';
+      statusPill.textContent = s.status || 'unknown';
+    }
+    el('btnPoll').onclick = tailLogs;
+    el('btnRefresh').onclick = tailLogs;
+
+    // List results
+    el('btnResults').onclick = async ()=>{
+      const r = await fetch('/results'); 
+      const j = await r.json();
+      if(!Array.isArray(j) || j.length===0){ el('resultsBox').textContent='(no results yet)'; return; }
+      el('resultsBox').textContent = j.map(o=>`${o.path}  \t${o.size}B`).join('\n');
+    };
+
+    // Download
+    el('btnDownload').onclick = ()=> { window.location.href = '/download'; };
+  </script>
+</body>
+</html>

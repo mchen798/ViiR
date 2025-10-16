@@ -9,4 +9,5 @@ dependencies:
   - bioconductor-deseq2
   - rsem=1.3.3
   - barrnap=0.9
+  - python=3.12
   - biopython
