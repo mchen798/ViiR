@@ -8,9 +8,9 @@ import threading
 import logging
 import re
 from pathlib import Path, PurePath
-from typing import Optional, Dict, Literal
+from typing import Optional, Dict, Literal, List
 import tempfile, zipfile
-from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, Request, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, BackgroundTasks, Request, HTTPException, Body
 from fastapi.responses import PlainTextResponse, FileResponse, JSONResponse, HTMLResponse
 from pydantic import BaseModel, field_validator, Field  
 # from .settings import DATA_ROOT, PIPELINE_SH, DEFAULT_ARGS
@@ -26,7 +26,7 @@ app = FastAPI(
     version="1.0.0"
     )
 
-
+ROOT = Path("/workspace").resolve()
 WORKSPACE = Path(os.environ.get("WORKSPACE", "/workspace"))
 LOG_FILE = WORKSPACE / "run_viir.log"
 CONFIG_PATH = WORKSPACE / "config.yaml"
@@ -75,8 +75,45 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 def index():
     return FileResponse(str(STATIC_DIR / "index.html"))
 
+#------------------------
+# 路径相关功能函数
+#------------------------
+def safe_rel(path_str: str) -> Path:
+    """
+    只允许写入 /workspace 下的相对路径；阻止 .. 、绝对路径等。
+    """
+    if not path_str:
+        return ROOT
+    rel = Path(path_str.strip().lstrip("/"))
+    p = (ROOT / rel).resolve()
+    if not str(p).startswith(str(ROOT)):
+        raise HTTPException(status_code=400, detail="Illegal path")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return p
 
+def infer_out_dir(config_path: Path, workspace: Path) -> Path:
+    # 读取 YAML（你已经引入了 yaml.safe_load）
+    cfg = read_config()  # 已有函数
+    out_val = cfg.get("out")
+    if not out_val:
+        raise HTTPException(status_code=400, detail="'out' not set in config.yaml")
+    p = Path(out_val)
+    return p if p.is_absolute() else (workspace / p)
 
+def ensure_dir_exists(directory_path: Path):
+    """
+    检查目录是否存在。如果不存在，则创建它。
+    如果目录已存在，则不做任何操作。
+    """
+    try:
+        # parents=True 允许创建任何缺失的父目录
+        # exist_ok=True 允许目录已经存在而不会引发 FileExistsError
+        directory_path.mkdir(parents=True, exist_ok=True)
+        log.info(f"[DIR_CHECK] Directory ensured: {directory_path}")
+    except Exception as e:
+        # 记录任何创建过程中发生的I/O错误或其他异常
+        log.error(f"[DIR_ERROR] Failed to create directory {directory_path}: {e}")
+        raise IOError(f"Failed to create directory {directory_path}") from e
 
 # ====================================================================
 # Pydantic 数据模型 - 用于规范化输入和输出
@@ -196,6 +233,9 @@ def run_viir(extra_params: list[str]):
         log.error(f"[RUN] exception: {e}")
 
 
+#------------------------
+# config相关功能函数
+#------------------------
 def read_config() -> dict:
     """从文件中安全读取 YAML 配置"""
     try:
@@ -219,15 +259,32 @@ def write_config(config_data: dict):
         # 写入失败
         raise HTTPException(status_code=500, detail=f"Failed to write config file: {e}")
 
-# 功能函数
-def infer_out_dir(config_path: Path, workspace: Path) -> Path:
-    # 读取 YAML（你已经引入了 yaml.safe_load）
-    cfg = read_config()  # 已有函数
-    out_val = cfg.get("out")
-    if not out_val:
-        raise HTTPException(status_code=400, detail="'out' not set in config.yaml")
-    p = Path(out_val)
-    return p if p.is_absolute() else (workspace / p)
+#-----------------------------------------
+# 数据预处理相关功能函数 preprocessing
+#-----------------------------------------
+
+def split_run(cmd: list[str], cwd: Path | None = None):
+    proc = subprocess.run(cmd, cwd=cwd or ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    if proc.returncode != 0:
+        raise HTTPException(status_code=500, detail=f"Command failed: {' '.join(cmd)}\n{proc.stdout[:4000]}")
+    return proc.stdout
+
+def split_detect_pairs(folder: Path) -> tuple[list[str], list[str]]:
+    """
+    简单匹配 R1/R2：优先 *_1.fq.gz / *_2.fq.gz；否则 *_R1* / *_R2*；再否则 *_1.fastq.gz / *_2.fastq.gz
+    """
+    pat1 = list(folder.glob("*_1.fq.gz"))
+    pat2 = list(folder.glob("*_2.fq.gz"))
+    if not pat1 or not pat2:
+        pat1 = list(folder.glob("*_R1*.fq.gz")) or list(folder.glob("*_R1*.fastq.gz"))
+        pat2 = list(folder.glob("*_R2*.fq.gz")) or list(folder.glob("*_R2*.fastq.gz"))
+    if not pat1 or not pat2:
+        pat1 = list(folder.glob("*_1.fastq.gz"))
+        pat2 = list(folder.glob("*_2.fastq.gz"))
+    return [str(p) for p in sorted(pat1)], [str(p) for p in sorted(pat2)]
+
+
+
 
 # -----------------------------------------------------------
 # API 路由
@@ -238,60 +295,100 @@ def healthz():
     return "ok"
 
 
-
-
-UPLOAD_DIR = Path("/workspace")
-@app.get("/upload", response_class=HTMLResponse)
-def upload_page():
-    return """
-<!doctype html>
-<html>
-  <body>
-    <h3>Upload to /workspace</h3>
-    <input id="f" type="file" />
-    <button onclick="start()">Upload</button>
-    <div id="p"></div>
-    <script>
-      function start() {
-        const f = document.getElementById('f').files[0];
-        if (!f) { alert('pick a file'); return; }
-        const form = new FormData();
-        form.append('file', f, f.name);
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/upload');
-        xhr.upload.onprogress = (e)=> {
-          if (e.lengthComputable) {
-            const pct = (e.loaded / e.total * 100).toFixed(1);
-            document.getElementById('p').innerText = `${pct}% (${(e.loaded/1024/1024).toFixed(1)} MiB)`;
-          }
-        };
-        xhr.onload = ()=> { document.getElementById('p').innerText += '\\n' + xhr.responseText; };
-        xhr.onerror = ()=> { document.getElementById('p').innerText += '\\nError'; };
-        xhr.send(form);
-      }
-    </script>
-  </body>
-</html>
-"""
-
 @app.post("/api/upload")
-async def upload_api(file: UploadFile = File(...)):
-    name = PurePath(file.filename).name
-    dest = UPLOAD_DIR / name
+async def upload_api(    
+    file: UploadFile = File(...),
+    dest: Optional[str] = Form(default="")  # 新增：允许前端传 /workspace 下的相对目标路径/文件名
+):
+    # 若 dest 为空 -> 使用原文件名；若 dest 是目录 -> 以原文件名落盘；若 dest 含文件名 -> 用它
+    base_name = PurePath(file.filename).name
+    if dest and dest.endswith("/"):
+        target = safe_rel(dest) / base_name
+    elif dest:
+        target = safe_rel(dest)
+    else:
+        target = ROOT / base_name
+    log.info(f"[UPLOAD_API] saving upload to {target} (from {file.filename})")
     # 流式写盘，避免一次性读入内存
-    with open(dest, "wb") as f:
+    with open(target, "wb") as f:
         while True:
-            chunk = await file.read(1024 * 1024)  # 1 MiB
+            chunk = await file.read(1024 * 1024 * 16)  # 16 MiB
             if not chunk:
                 break
             f.write(chunk)
     return JSONResponse({"ok": True, "saved": str(dest)})
+
+# 专用上传 NGS-FSTAQ 路由
+@app.post("/api/upload_fastq")
+async def upload_fastq(
+    group: Literal["N", "V"] = Form(...),
+    batch: str = Form(...),
+    files: List[UploadFile] = File(...),
+):
+    if not batch.strip():
+        raise HTTPException(status_code=400, detail="batch is required")
+    saved = []
+    up_fq_base_dir = f"NGS_data/{group}/{batch}/"
+    ensure_dir_exists(ROOT / up_fq_base_dir)
+    for uf in files:
+        resp = await upload_api(uf, dest=up_fq_base_dir)  # 复用上面的逻辑
+        saved.append(resp.body.decode() if hasattr(resp, "body") else resp)
+    return {"ok": True, "dir": str(ROOT / up_fq_base_dir), "count": len(files)}
+
+# 数据预处理: 分割FSTAQ并生成 sample_list.txt
+@app.post("/prepare_fastq")
+def prepare_fastq(parts: int = 3):
+    """
+    扫描 NGS_data/N 与 NGS_data/V 下的每个 batch：
+    - 运行 seqkit split2 生成 splited_fastq/<batch> 下的 part_001..part_{parts}
+    - 生成 /workspace/sample_list.txt
+    """
+    ngs = ROOT / "NGS_data"
+    if not ngs.exists():
+        raise HTTPException(status_code=404, detail="NGS_data not found")
+
+    lines = []
+    for group in ["N", "V"]:
+        gdir = ngs / group
+        if not gdir.exists():
+            continue
+        for batch_dir in sorted([p for p in gdir.iterdir() if p.is_dir()]):
+            r1s, r2s = split_detect_pairs(batch_dir)
+            if not r1s or not r2s:
+                continue  # 跳过不完整的批次
+            out_dir = ROOT / "splited_fastq" / batch_dir.name
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            # 用 micromamba 环境里的 seqkit
+            cmd = [
+                MAMBA, "run", "-n", "viir",
+                "seqkit", "split2",
+                "-1", r1s[0], "-2", r2s[0],
+                "-p", str(parts), "-O", str(out_dir), "-f"
+            ]
+            split_run(cmd, cwd=ROOT)
+
+            # 采集输出 part 文件名，按 part_001..part_{parts} 逐一写入行
+            for i in range(1, parts + 1):
+                pi = f"part_{i:03d}"
+                r1p = next(out_dir.glob(f"*_1.{pi}.fq.gz"), None)
+                r2p = next(out_dir.glob(f"*_2.{pi}.fq.gz"), None)
+                if r1p and r2p:
+                    lines.append(f"{group} {r1p} {r2p}")
+
+    if not lines:
+        raise HTTPException(status_code=400, detail="No FASTQ pairs found to split")
+
+    sl = ROOT / "sample_list.txt"
+    sl.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return {"ok": True, "sample_list": str(sl), "lines": len(lines)}
 
 
 ## 读取配置路由
 @app.get("/get_config", summary="获取当前的 ViiR 配置")
 def get_config_endpoint():
     """读取并返回 config.yaml 的当前内容。"""
+    log.info(f"[GET] get current config at {CONFIG_PATH}")
     return read_config()
 
 # 测试示例 (使用 curl):
@@ -302,17 +399,16 @@ def get_config_endpoint():
 #      -d '{"threads": 32, "pvalue": 0.05, "SS_lib_type": "No"}'
 
 ## 更新配置路由
+    # 接收 JSON 请求体，用于更新 config.yaml 中的参数。
+    # 只更新请求体中提供的非空字段，未提供的字段保持不变。
 @app.post("/update_config", summary="更新 ViiR 配置中的特定参数")
 def update_config_endpoint(new_params: ConfigUpdateParams):
-    """
-    接收 JSON 请求体，用于更新 config.yaml 中的参数。
-    只更新请求体中提供的非空字段，未提供的字段保持不变。
-    """
     # 1. 读取现有配置
     current_config = read_config()
-    
     # 将 Pydantic 模型转换为字典，并排除值为 None 的字段
     update_data = new_params.dict(by_alias=True, exclude_none=True)
+
+    log.info(f"[UPDATE] update config with parameter {update_data}")
     
     if not update_data:
         raise HTTPException(status_code=400, detail="No valid parameters provided for update.")
@@ -327,7 +423,6 @@ def update_config_endpoint(new_params: ConfigUpdateParams):
 
     # 3. 写入更新后的配置
     write_config(current_config)
-
     # 4. 返回成功信息和更新后的配置
     return {
         "status": "success", 
@@ -336,8 +431,7 @@ def update_config_endpoint(new_params: ConfigUpdateParams):
         "current_config": current_config
     }
 
-
-
+# 任务启动路由 (单任务)
 @app.post("/run")
 async def run(
     file: UploadFile = File(..., description="Upload config.yaml for ViiR pipeline"),
@@ -365,6 +459,7 @@ async def run(
 
     return {"status": "started"}
 
+# 任务状态路由
 @app.get("/status")
 def status():
     """查询任务状态"""
@@ -375,9 +470,11 @@ def status():
         "returncode": JOB["returncode"],
     }
 
+# 读取日志路由
 @app.get("/logs", response_class=PlainTextResponse)
 def logs(tail: int = 300):
     """读取末尾日志"""
+    log.info(f"[LOG] get log with tail {tail} at {time.asctime()}")
     if not LOG_FILE.exists():
         return ""
     try:
@@ -408,8 +505,7 @@ def results():
             out.append({"path": str(p), "size": s.st_size, "mtime": s.st_mtime})
     return out
 
-
-
+# 下载结果路由
 @app.get("/download")
 def download():
     out_path = infer_out_dir(CONFIG_PATH, WORKSPACE)

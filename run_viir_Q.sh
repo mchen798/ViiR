@@ -133,9 +133,6 @@ log "[INFO] VIIR_RESOURCES = $VIIR_RESOURCES"
 export TRINITY_CPU=${N_THREADS}
 export TRINITY_MAX_MEMORY=${MAX_MEMORY}
 
-export OMP_NUM_THREADS=${N_THREADS}
-export OPENBLAS_NUM_THREADS=${N_THREADS}
-export MKL_NUM_THREADS=${N_THREADS}
 
 # =================== 3. Directory Preparation (Robust Version) ======================
 # Define required directories in an array for maintainability and clarity
@@ -254,7 +251,7 @@ run_trimmomatic() {
     TRINITY_LEFT=""
     TRINITY_RIGHT=""
 
-    export _JAVA_OPTIONS="-Xmx${MAX_MEMORY}"
+
     
     local fastq_list_output="${OUT_DIR}/00_fastq/fastq_list.txt"
     > "$fastq_list_output"  # Clear previous file if exists
@@ -269,12 +266,23 @@ run_trimmomatic() {
         PREFIX="${SUBDIR}/${SAMPLE_TYPE}${FASTQ_CNT}"
 
         create_dir "$SUBDIR"
-        trimmomatic PE -threads ${N_THREADS} -phred33 \
-            "${FASTQ1}" "${FASTQ2}" \
-            "${PREFIX}.1.trimmed.fastq.gz" "${PREFIX}.1.unpaired.trimmed.fastq.gz" \
-            "${PREFIX}.2.trimmed.fastq.gz" "${PREFIX}.2.unpaired.trimmed.fastq.gz" \
-            ILLUMINACLIP:"${ADAPTER_FASTA}":2:30:10 \
-            LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:75
+        (
+          # 给 Trimmomatic 这一次设置 JVM 堆和 java.io.tmpdir（命令前缀，非全局）
+        #    _JAVA_OPTIONS="-Xms${MAX_MEMORY} -Xmx${MAX_MEMORY} -Djava.io.tmpdir=${TRINITY_TMPDIR}" \
+          _JAVA_OPTIONS="-Xms${MAX_MEMORY} -Xmx${MAX_MEMORY}" \
+          trimmomatic PE -threads "${N_THREADS}" -phred33 \
+              "${FASTQ1}" "${FASTQ2}" \
+              "${PREFIX}.1.trimmed.fastq.gz" "${PREFIX}.1.unpaired.trimmed.fastq.gz" \
+              "${PREFIX}.2.trimmed.fastq.gz" "${PREFIX}.2.unpaired.trimmed.fastq.gz" \
+              ILLUMINACLIP:"${ADAPTER_FASTA}":2:30:10 \
+              LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:75
+        )
+        # trimmomatic PE -threads ${N_THREADS} -phred33 \
+        #     "${FASTQ1}" "${FASTQ2}" \
+        #     "${PREFIX}.1.trimmed.fastq.gz" "${PREFIX}.1.unpaired.trimmed.fastq.gz" \
+        #     "${PREFIX}.2.trimmed.fastq.gz" "${PREFIX}.2.unpaired.trimmed.fastq.gz" \
+        #     ILLUMINACLIP:"${ADAPTER_FASTA}":2:30:10 \
+        #     LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:75
 
         echo -e "${SAMPLE_TYPE}\t${SAMPLE_TYPE}${FASTQ_CNT}\t${PREFIX}.1.trimmed.fastq.gz\t${PREFIX}.2.trimmed.fastq.gz" >> "$fastq_list_output"
 
@@ -299,48 +307,59 @@ run_trimmomatic
 # ---- 5.2 Trinity de novo Assembly ----
 run_trinity() {
 
+
+    # export _JAVA_OPTIONS="-Xms${MAX_MEMORY} -Xmx${MAX_MEMORY}"
+
     export TRINITY_CPU="${N_THREADS}"
     export TRINITY_MAX_MEMORY="${MAX_MEMORY}"
-    export _JAVA_OPTIONS="-Xmx${MAX_MEMORY}"
+    export TRINITY_TMPDIR=/dev/shm/trinity_tmp
+    export TMPDIR=/dev/shm/trinity_tmp
+    mkdir -p /dev/shm/trinity_tmp
 
-    log "[STEP] Running Trinity assembly..."
-    create_dir "${OUT_DIR}/10_trinity"
-    # local trinity_cmd="Trinity --seqType fq --max_memory ${MAX_MEMORY} \
-    #     --left ${TRINITY_LEFT} --right ${TRINITY_RIGHT} \
-    #     --output ${OUT_DIR}/10_trinity/trinity_assembly \
-    #     --CPU ${N_THREADS} --full_cleanup"
-  # 用数组避免 eval/转义问题
-    local -a tr_cmd=(
-        Trinity
-        --seqType fq
-        --max_memory "${TRINITY_MAX_MEMORY}"
-        --left "${TRINITY_LEFT}"
-        --right "${TRINITY_RIGHT}"
-        --output "${OUT_DIR}/10_trinity/trinity_assembly"
-        --CPU "${TRINITY_CPU}"
-        --full_cleanup
+    (
+        export OMP_NUM_THREADS=1
+        export OPENBLAS_NUM_THREADS=1
+        export MKL_NUM_THREADS=1
+
+        log "[STEP] Running Trinity assembly..."
+        create_dir "${OUT_DIR}/10_trinity"
+        # local trinity_cmd="Trinity --seqType fq --max_memory ${MAX_MEMORY} \
+        #     --left ${TRINITY_LEFT} --right ${TRINITY_RIGHT} \
+        #     --output ${OUT_DIR}/10_trinity/trinity_assembly \
+        #     --CPU ${N_THREADS} --full_cleanup"
+    # 用数组避免 eval/转义问题
+        local -a tr_cmd=(
+            Trinity
+            --seqType fq
+            --max_memory "${TRINITY_MAX_MEMORY}"
+            --left "${TRINITY_LEFT}"
+            --right "${TRINITY_RIGHT}"
+            --output "${OUT_DIR}/10_trinity/trinity_assembly"
+            --CPU "${TRINITY_CPU}"
+            --full_cleanup
+        )
+
+
+        # if [ "$SS_LIB_TYPE" != "No" ]; then
+        #     trinity_cmd="${trinity_cmd} --SS_lib_type ${SS_LIB_TYPE}"
+        # fi
+        # eval "$trinity_cmd"
+        # log "[STEP] Trinity assembly complete."
+
+        # 只有在 SS_LIB_TYPE 非空 且 不为 "No" 时才追加
+        if [[ -n "${SS_LIB_TYPE:-}" && "${SS_LIB_TYPE}" != "No" ]]; then
+            tr_cmd+=( --SS_lib_type "${SS_LIB_TYPE}" )
+        fi
+
+        log "[INFO] Trinity cmd: ${tr_cmd[*]}"
+        _JAVA_OPTIONS="-Xms${TRINITY_MAX_MEMORY} -Xmx${TRINITY_MAX_MEMORY}" \
+            "${tr_cmd[@]}"
+        local rc=$?
+        if (( rc != 0 )); then
+            log "[ERROR] Trinity failed (exit $rc)"; exit $rc
+        fi
+        log "[STEP] Trinity assembly complete."
     )
-
-
-    # if [ "$SS_LIB_TYPE" != "No" ]; then
-    #     trinity_cmd="${trinity_cmd} --SS_lib_type ${SS_LIB_TYPE}"
-    # fi
-    # eval "$trinity_cmd"
-    # log "[STEP] Trinity assembly complete."
-
-    # 只有在 SS_LIB_TYPE 非空 且 不为 "No" 时才追加
-    if [[ -n "${SS_LIB_TYPE:-}" && "${SS_LIB_TYPE}" != "No" ]]; then
-        tr_cmd+=( --SS_lib_type "${SS_LIB_TYPE}" )
-    fi
-
-    log "[INFO] Trinity cmd: ${tr_cmd[*]}"
-    "${tr_cmd[@]}"
-    local rc=$?
-    if (( rc != 0 )); then
-        log "[ERROR] Trinity failed (exit $rc)"; exit $rc
-    fi
-    log "[STEP] Trinity assembly complete."
-
 }
 
 run_trinity

@@ -11,3 +11,4 @@ dependencies:
   - barrnap=0.9
   - python=3.12
   - biopython
+  - seqkit

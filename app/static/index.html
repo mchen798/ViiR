@@ -4,34 +4,94 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Web-ViiR | Minimal UI</title>
-  <style>
-    :root { --bg:#0b1020; --card:#131a2a; --ink:#e7eaf6; --muted:#9aa3ba; --pri:#6aa6ff; }
+    <style>
+    :root { 
+      /* 主题颜色 */
+      --bg: #1e293b;        /* 主背景：柔和的深蓝/灰蓝 */
+      --card: #334155;      /* 卡片/表面：比背景稍亮的深蓝/灰蓝 */
+      --ink: #f8fafc;       /* 文本颜色：接近纯白但更柔和 */
+      --muted: #94a3b8;     /* 辅助/静音文本：柔和的浅灰 */
+      
+      /* 强调色/交互色 */
+      --primary: #3b82f6;   /* 主强调色：明亮的蓝色，用于链接/按钮 */
+      --primary-hover: #60a5fa; /* 强调色悬停 */
+      
+      /* 状态色 */
+      --success: #10b981;   /* 成功/好的状态：绿色 */
+      --danger: #ef4444;    /* 错误/坏的状态：红色 */
+      --border: #475569;    /* 边框/分隔线：中等灰色 */
+    }
+    
+    /* 调整原有的CSS以匹配新的变量名和风格 */
     *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    a{color:var(--pri);text-decoration:none}
-    header{position:sticky;top:0;background:rgba(11,16,32,.8);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid #1c2742;z-index:5}
+    a{color:var(--primary);text-decoration:none}
+    
+    header{
+      position:sticky;top:0;
+      /* 使用深色 header 背景，与主背景形成对比 */
+      background:rgba(15, 23, 42, 0.9); 
+      backdrop-filter:saturate(180%) blur(10px);
+      border-bottom:1px solid var(--border);
+      z-index:5
+    }
     header .wrap{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px}
     h1{font-size:18px;margin:0}
     main{max-width:1100px;margin:0 auto;padding:18px;display:grid;gap:16px}
-    .card{background:var(--card);border:1px solid #1c2742;border-radius:12px;padding:16px}
+    .card{
+      background:var(--card);
+      border:1px solid var(--border); /* 使用新的边框色 */
+      border-radius:12px;padding:16px
+    }
     .grid{display:grid;gap:12px}
     .g-2{grid-template-columns: repeat(2, minmax(0,1fr))}
     .g-3{grid-template-columns: repeat(3, minmax(0,1fr))}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     label{display:block;font-weight:600;margin-bottom:6px;color:var(--muted)}
+    
+    /* 表单元素统一使用更深的背景色以提高输入区域的辨识度 */
     input[type="text"], input[type="number"], select, textarea{
-      width:100%;padding:10px 12px;border-radius:10px;border:1px solid #273253;background:#0e1527;color:var(--ink);
+      width:100%;padding:10px 12px;border-radius:10px;
+      border:1px solid var(--border);
+      background:#0f172a; /* 更深的背景色 */
+      color:var(--ink);
     }
     input[type="file"]{color:var(--muted)}
     textarea{min-height:120px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:12px}
-    .btn{background:linear-gradient(180deg,#6aa6ff,#4f86e6);border:0;color:white;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    
+    /* 主要按钮 */
+    .btn{
+      background:var(--primary); /* 使用主强调色 */
+      border:0;color:var(--ink);
+      padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;
+      transition: background-color 0.2s; /* 添加过渡效果 */
+    }
+    .btn:hover:not(:disabled) {
+      background: var(--primary-hover); /* 悬停效果 */
+    }
     .btn:disabled{opacity:.5;cursor:not-allowed}
-    .btn.subtle{background:#1c2742}
-    .bad{color:#ff8b8b}
-    .ok{color:#8bffa6}
+    /* 次要按钮 */
+    .btn.subtle{background:var(--border);color:var(--muted)}
+    .btn.subtle:hover:not(:disabled){background:var(--card)}
+    /* 状态颜色 */
+    .bad{color:var(--danger)}
+    .ok{color:var(--success)}
+    
+    /* 代码/预格式化文本 */
     .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
-    pre{margin:0;white-space:pre-wrap;word-break:break-word;background:#0d1425;border:1px solid #273253;border-radius:10px;padding:10px}
-    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#1c2742;color:#dfe7ff}
-    .divider{height:1px;background:#1c2742;margin:6px 0 2px}
+    pre{
+      margin:0;white-space:pre-wrap;word-break:break-word;
+      background:#0f172a; /* 更深的背景色 */
+      border:1px solid var(--border);
+      border-radius:10px;padding:10px
+    }
+    /* 标签 */
+    .pill{
+      display:inline-block;padding:2px 8px;border-radius:999px;
+      background:var(--border); /* 使用边框色作为背景 */
+      color:var(--ink)
+    }
+    /* 分隔线 */
+    .divider{height:1px;background:var(--border);margin:6px 0 2px}
   </style>
 </head>
 <body>
@@ -88,6 +148,34 @@
           <div class="mono" id="otherPaths" style="margin-top:8px;color:var(--muted)"></div>
         </div>
       </div>
+
+      <div class="divider"></div>
+      <div class="grid g-2">
+        <div>
+          <h3>Batch upload (N/V)</h3>
+          <div class="row">
+            <select id="batchGroup">
+              <option value="N">N (Normal)</option>
+              <option value="V">V (Virus)</option>
+            </select>
+            <input type="text" id="batchName" placeholder="e.g., dsRNA_3"/>
+          </div>
+          <input type="file" id="batchFiles" multiple accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <button class="btn" id="btnUpBatch">Upload batch</button>
+          <div class="mono" id="batchMsg" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+        <div>
+          <h3>Prepare FASTQ</h3>
+          <div class="row">
+            <label>parts</label>
+            <input type="number" id="parts" value="3" min="1"/>
+            <button class="btn" id="btnPrepare">Run seqkit split2 & build sample_list</button>
+          </div>
+          <div class="mono" id="prepMsg" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+      </div>
+
+
     </section>
 
     <!-- 2) Config options -->
@@ -243,7 +331,8 @@
 
     // Upload buttons
     el('btnUpN').onclick = async ()=>{
-      const r1 = el('nR1').files[0]; const r2 = el('nR2').files[0];
+      const r1 = el('nR1').files[0]; 
+      const r2 = el('nR2').files[0];
       if(!r1){ alert('Normal R1 is required'); return; }
       el('btnUpN').disabled = true;
       try{
@@ -295,6 +384,44 @@
         el('otherPaths').textContent = msgs.join('\n');
       }catch(e){ alert(e.message); }
       finally{ el('btnUpOther').disabled=false; }
+    };
+
+    // 批次上传
+    el('btnUpBatch').onclick = async ()=>{
+      const group = el('batchGroup').value;
+      const batch = el('batchName').value.trim();
+      const files = el('batchFiles').files;
+      if(!batch){ alert('Please input batch name'); return; }
+      if(!files.length){ alert('Pick FASTQ files'); return; }
+      el('btnUpBatch').disabled = true;
+      try{
+        const fd = new FormData();
+        fd.append('group', group);
+        fd.append('batch', batch);
+        for(const f of files) fd.append('files', f, f.name);
+        const r = await fetch('/api/upload_fastq', { method:'POST', body: fd });
+        const j = await r.json();
+        if(!r.ok) throw new Error(j.detail || 'upload_fastq failed');
+        el('batchMsg').textContent = `Saved ${j.count} files under ${j.dir}`;
+      }catch(e){ alert(e.message); }
+      finally{ el('btnUpBatch').disabled = false; }
+    };
+
+    // 一键准备（seqkit split2 & sample_list）
+    el('btnPrepare').onclick = async ()=>{
+      const parts = Number(el('parts').value || 3);
+      el('btnPrepare').disabled = true;
+      try{
+        const r = await fetch('/prepare_fastq', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({parts}) });
+        const j = await r.json();
+        if(!r.ok) throw new Error(j.detail || 'prepare_fastq failed');
+        el('prepMsg').textContent = `OK: ${j.sample_list} (${j.lines} lines)`;
+        // 同时把 state.fastqList 指向 sample_list.txt，并刷新 config 预览
+        state.fastqList = j.sample_list;
+        el('listPath').textContent = j.sample_list + ' (generated by server)';
+        el('btnGen').click();
+      }catch(e){ alert(e.message); }
+      finally{ el('btnPrepare').disabled = false; }
     };
 
     // Upload custom adapter / pfam
