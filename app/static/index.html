@@ -34,9 +34,30 @@
       border-bottom:1px solid var(--border);
       z-index:5
     }
-    header .wrap{max-width:1100px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px}
+    header .wrap{
+      width: 90vw;             /* 总是占据视口宽度的 90% */
+      max-width: 1600px;       /* 确保内容在超宽屏上不会太散 */
+      
+      margin:0 auto;
+      padding:10px 16px;
+      display:flex;
+      align-items:center;
+      gap:16px
+    }
     h1{font-size:18px;margin:0}
-    main{max-width:1100px;margin:0 auto;padding:18px;display:grid;gap:16px}
+    main{
+      width: 90vw;
+      max-width:1600px;
+      margin:0 auto;
+      padding:18px;
+      display:grid;
+      gap:16px;
+      /* 【修改点 3】核心：使用 repeat(auto-fit, minmax(最小宽度, 1fr)) 实现卡片自动多列 */
+      /* 让 .card 自动排列，最小宽度 400px，自动填充为 1fr */
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); 
+      /* 注意：如果 main 内部直接就是 .card，则此 Grid 生效。如果 main 下还有其他结构，需要调整。 */
+    
+    }
     .card{
       background:var(--card);
       border:1px solid var(--border); /* 使用新的边框色 */
@@ -48,6 +69,28 @@
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     label{display:block;font-weight:600;margin-bottom:6px;color:var(--muted)}
     
+
+    .card-head{ display:flex; align-items:center; gap:10px; }
+    .card-head .pill{ margin-left:auto; }
+    .toolbar{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+    .toolbar.wrap{ flex-wrap:wrap; }
+    .toolbar .spacer{ flex:1; }
+    .inline{ display:inline-flex; align-items:center; gap:6px; }
+    .btn.micro{ padding:2px 8px; font-size:12px; }
+    .panel{ border:1px solid #273253; border-radius:10px; padding:8px; background:#0b1222; }
+    .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+    pre.mono{ margin:0; background:#0d1425; border:1px solid #273253; border-radius:8px; padding:10px; line-height:1.35; white-space:pre-wrap; word-break:break-word; overflow:auto; }
+    pre.tall{ max-height:380px; }
+    pre.mid{ max-height:260px; }
+
+    /* 三列自适应，在窄屏降为两列/一列 */
+    .grid.g-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .panel.span-2{ grid-column:span 2; }
+    @media (max-width: 1200px){ .grid.g-3{ grid-template-columns:1fr 1fr; } .panel.span-2{ grid-column:span 2; } }
+    @media (max-width: 800px){ .grid.g-3{ grid-template-columns:1fr; } .panel.span-2{ grid-column:span 1; } }
+
+
+
     /* 表单元素统一使用更深的背景色以提高输入区域的辨识度 */
     input[type="text"], input[type="number"], select, textarea{
       width:100%;padding:10px 12px;border-radius:10px;
@@ -79,10 +122,16 @@
     /* 代码/预格式化文本 */
     .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
     pre{
-      margin:0;white-space:pre-wrap;word-break:break-word;
-      background:#0f172a; /* 更深的背景色 */
-      border:1px solid var(--border);
-      border-radius:10px;padding:10px
+      margin:0;
+      white-space:pre-wrap; /* 自动换行 */
+      word-break:break-word;
+      background:#0d1425;
+      border:1px solid #273253;
+      border-radius:10px;
+      padding:10px;
+      max-height:320px;      /* 限高可滚动 */
+      overflow:auto;
+      line-height:1.35;
     }
     /* 标签 */
     .pill{
@@ -152,8 +201,8 @@
       <div class="divider"></div>
       <div class="grid g-2">
         <div>
-          <h3>Batch upload (N/V)</h3>
-          <div class="row">
+          <h3>Batch upload dataset (N/V)</h3>
+          <!-- <div class="row">
             <select id="batchGroup">
               <option value="N">N (Normal)</option>
               <option value="V">V (Virus)</option>
@@ -163,8 +212,28 @@
           <input type="file" id="batchFiles" multiple accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
           <button class="btn" id="btnUpBatch">Upload batch</button>
           <div class="mono" id="batchMsg" style="margin-top:8px;color:var(--muted)"></div>
-        </div>
+        </div> -->
+
         <div>
+          <h4>Batch upload — N</h4>
+          <input type="text" id="batchN" placeholder="e.g., dsRNA_3"/>
+          <input type="file" id="filesN" multiple accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <pre id="pickN" class="mono" style="max-height:120px"></pre>
+          <button class="btn" id="btnUpBatchN">Upload N batch</button>
+          <div class="mono" id="msgN" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+        <!-- Batch V -->
+        <div>
+          <h4>Batch upload — V</h4>
+          <input type="text" id="batchV" placeholder="e.g., dsRNA_4"/>
+          <input type="file" id="filesV" multiple accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <pre id="pickV" class="mono" style="max-height:120px"></pre>
+          <button class="btn" id="btnUpBatchV">Upload V batch</button>
+          <div class="mono" id="msgV" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+
+
+        <!-- <div>
           <h3>Prepare FASTQ</h3>
           <div class="row">
             <label>parts</label>
@@ -172,7 +241,22 @@
             <button class="btn" id="btnPrepare">Run seqkit split2 & build sample_list</button>
           </div>
           <div class="mono" id="prepMsg" style="margin-top:8px;color:var(--muted)"></div>
+        </div> -->
+        <div>
+        <h3>Prepare FASTQ (seqkit split2)</h3>
+          <div class="row">
+            <span class="pill">Split parts: 3 (fixed)</span>
+            <button class="btn" id="btnPrepare">Build sample_list.txt</button>
+          </div>
+          <div class="mono" id="prepMsg" style="margin-top:8px;color:var(--muted)"></div>
         </div>
+        <div>
+          <h3>sample_list preview</h3>
+          <pre id="samplePreview" class="mono" style="max-height:180px"></pre>
+        </div>
+
+
+
       </div>
 
 
@@ -259,7 +343,7 @@
     </section>
 
     <!-- 3) Run & Monitor -->
-    <section class="card">
+    <!-- <section class="card">
       <h2>3) Run & Monitor</h2>
       <div class="row">
         <button class="btn" id="btnRun">Run</button>
@@ -281,12 +365,103 @@
         <label>Results</label>
         <pre id="resultsBox" class="mono"></pre>
       </div>
+    </section> -->
+    <!-- 3) Run & Monitor -->
+    <section class="card" id="runCard">
+      <div class="card-head">
+        <h2>3) Run & Monitor</h2>
+        <div class="pill" id="statusPill">idle</div>
+      </div>
+
+      <!-- Controls Row 1: run & auto-poll -->
+      <div class="toolbar">
+        <button class="btn" id="btnRun">Run</button>
+        <button class="btn subtle" id="btnPollOnce" title="Fetch once">Refresh</button>
+        <label class="inline">
+          <input type="checkbox" id="autoPoll" />
+          Auto refresh
+        </label>
+        <select id="pollSec" title="Poll interval (sec)">
+          <option value="2">2s</option>
+          <option value="3" selected>3s</option>
+          <option value="5">5s</option>
+          <option value="10">10s</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn subtle" id="btnCopyLog">Copy logs</button>
+        <button class="btn subtle" id="btnClearLog">Clear view</button>
+      </div>
+
+      <!-- Controls Row 2: logs + download -->
+      <div class="toolbar wrap">
+        <label class="inline">Tail
+          <select id="tailLines">
+            <option>50</option><option selected>200</option><option>500</option><option>1000</option>
+          </select> lines
+        </label>
+        <label class="inline">
+          <input type="checkbox" id="compactLog" checked />
+          Compact progress (\\r merge)
+        </label>
+        <label class="inline">
+          <input type="checkbox" id="autoScroll" checked />
+          Auto scroll
+        </label>
+
+        <div class="spacer"></div>
+
+        <label class="inline">Preset
+          <select id="dlPreset">
+            <option value="lite" selected>Lite (fast)</option>
+            <option value="full">Full (everything)</option>
+          </select>
+        </label>
+        <label class="inline">Format
+          <select id="dlFormat">
+            <option value="tar">tar</option>
+            <option value="tar.gz" selected>tar.gz</option>
+            <option value="tar.zst">tar.zst</option>
+            <option value="zip">zip</option>
+          </select>
+        </label>
+        <button class="btn" id="btnDownload">Download</button>
+      </div>
+
+      <!-- Panels -->
+      <div class="grid g-3" style="margin-top:10px">
+        <div class="panel">
+          <div class="panel-head">
+            <label>Status</label>
+            <button class="btn micro subtle" id="btnShowStatus">Pretty</button>
+          </div>
+          <pre id="statusBox" class="mono tall"></pre>
+        </div>
+
+        <div class="panel span-2">
+          <div class="panel-head">
+            <label>Logs (<span id="logMeta">last 200 lines</span>)</label>
+          </div>
+          <pre id="logsBox" class="mono tall"></pre>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:10px">
+        <div class="panel-head">
+          <label>Results</label>
+          <div>
+            <button class="btn micro subtle" id="btnResults">List</button>
+          </div>
+        </div>
+        <pre id="resultsBox" class="mono mid"></pre>
+      </div>
     </section>
+
   </main>
 
   <script>
     const el = id => document.getElementById(id);
     const healthEl = el('health'), statusPill = el('status');
+    let pollTimer = null;
 
     async function ping(){
       try{
@@ -296,6 +471,22 @@
       }catch(e){ healthEl.textContent='down'; healthEl.className='pill bad'; }
     }
     ping();
+
+
+    function setBusy(btn, busy, textBusy, textIdle){
+      btn.disabled = !!busy;
+      if(textBusy && busy) btn.textContent = textBusy;
+      if(textIdle && !busy) btn.textContent = textIdle;
+    }
+
+    function setPill(status){
+      const pill = el('statusPill');
+      pill.textContent = status || 'unknown';
+      pill.className = 'pill ' + (status==='running' ? 'warn' : status==='failed' ? 'error' : 'ok');
+      // 运行中禁用 Run
+      el('btnRun').disabled = (status==='running');
+    }
+
 
     // --- Upload helper ---
     async function uploadFile(file){
@@ -321,10 +512,10 @@
       const adRadios = document.querySelectorAll('input[name="adSel"]');
       const pfRadios = document.querySelectorAll('input[name="pfSel"]');
       adRadios.forEach(r => r.onchange = ()=> {
-        document.getElementById('adCustomRow').style.display = (r.value==='custom' && r.checked) ? 'flex':'none';
+        el('adCustomRow').style.display = (r.value==='custom' && r.checked) ? 'flex':'none';
       });
       pfRadios.forEach(r => r.onchange = ()=> {
-        document.getElementById('pfCustomRow').style.display = (r.value==='custom' && r.checked) ? 'flex':'none';
+        el('pfCustomRow').style.display = (r.value==='custom' && r.checked) ? 'flex':'none';
       });
     }
     wireRadios();
@@ -386,14 +577,44 @@
       finally{ el('btnUpOther').disabled=false; }
     };
 
+
+
+
+
     // 批次上传
-    el('btnUpBatch').onclick = async ()=>{
-      const group = el('batchGroup').value;
-      const batch = el('batchName').value.trim();
-      const files = el('batchFiles').files;
+    // el('btnUpBatch').onclick = async ()=>{
+    //   const group = el('batchGroup').value;
+    //   const batch = el('batchName').value.trim();
+    //   const files = el('batchFiles').files;
+    //   if(!batch){ alert('Please input batch name'); return; }
+    //   if(!files.length){ alert('Pick FASTQ files'); return; }
+    //   el('btnUpBatch').disabled = true;
+    //   try{
+    //     const fd = new FormData();
+    //     fd.append('group', group);
+    //     fd.append('batch', batch);
+    //     for(const f of files) fd.append('files', f, f.name);
+    //     const r = await fetch('/api/upload_fastq', { method:'POST', body: fd });
+    //     const j = await r.json();
+    //     if(!r.ok) throw new Error(j.detail || 'upload_fastq failed');
+    //     el('batchMsg').textContent = `Saved ${j.count} files under ${j.dir}`;
+    //   }catch(e){ alert(e.message); }
+    //   finally{ el('btnUpBatch').disabled = false; }
+    // };
+
+    function listPicked(idInput, idPre){
+      const fs = el(idInput).files;
+      el(idPre).textContent = [...fs].map(f=>`${f.name}  (${(f.size/1e6).toFixed(2)} MB)`).join('\n') || '(no files selected)';
+    }
+    el('filesN').onchange = ()=> listPicked('filesN','pickN');
+    el('filesV').onchange = ()=> listPicked('filesV','pickV');
+
+    async function uploadBatch(group, batch, files, msgEl, btnEl){
       if(!batch){ alert('Please input batch name'); return; }
       if(!files.length){ alert('Pick FASTQ files'); return; }
-      el('btnUpBatch').disabled = true;
+      setBusy(btnEl,true,'Uploading...');
+      const totalBytes = [...files].reduce((s,f)=>s+f.size,0);
+      const t0 = performance.now();
       try{
         const fd = new FormData();
         fd.append('group', group);
@@ -402,27 +623,84 @@
         const r = await fetch('/api/upload_fastq', { method:'POST', body: fd });
         const j = await r.json();
         if(!r.ok) throw new Error(j.detail || 'upload_fastq failed');
-        el('batchMsg').textContent = `Saved ${j.count} files under ${j.dir}`;
+
+        const dt = (performance.now()-t0)/1000;
+        const mbps = (totalBytes/1e6/dt).toFixed(1);
+        msgEl.textContent = `Saved ${j.count} files → ${j.dir}\nTime: ${dt.toFixed(1)}s  |  Avg: ${mbps} MB/s`;
       }catch(e){ alert(e.message); }
-      finally{ el('btnUpBatch').disabled = false; }
-    };
+      finally{ setBusy(btnEl,false,'','Upload'); }
+    }
+    el('btnUpBatchN').onclick = ()=> uploadBatch('N', el('batchN').value.trim(), el('filesN').files, el('msgN'), el('btnUpBatchN'));
+    el('btnUpBatchV').onclick = ()=> uploadBatch('V', el('batchV').value.trim(), el('filesV').files, el('msgV'), el('btnUpBatchV'));
+
 
     // 一键准备（seqkit split2 & sample_list）
+    // el('btnPrepare').onclick = async ()=>{
+    //   const parts = Number(el('parts').value || 3);
+    //   el('btnPrepare').disabled = true;
+    //   try{
+    //     const r = await fetch('/prepare_fastq', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({parts}) });
+    //     const j = await r.json();
+    //     if(!r.ok) throw new Error(j.detail || 'prepare_fastq failed');
+    //     el('prepMsg').textContent = `OK: ${j.sample_list} (${j.lines} lines)`;
+    //     // 同时把 state.fastqList 指向 sample_list.txt，并刷新 config 预览
+    //     state.fastqList = j.sample_list;
+    //     el('listPath').textContent = j.sample_list + ' (generated by server)';
+    //     el('btnGen').click();
+    //   }catch(e){ alert(e.message); }
+    //   finally{ el('btnPrepare').disabled = false; }
+    // };
+
     el('btnPrepare').onclick = async ()=>{
-      const parts = Number(el('parts').value || 3);
-      el('btnPrepare').disabled = true;
+      const btn = el('btnPrepare');
+
+      // 读取批次名：确保你的页面上有这两个输入框的 id
+      const nb = (el('batchN')?.value || '').trim();
+      const vb = (el('batchV')?.value || '').trim();
+      if(!nb || !vb){
+        alert('请先填写 N 与 V 的 batch 名（如 dsRNA_3 / dsRNA_4）。');
+        return;
+      }
+      setBusy(btn,true,'Building...');
       try{
-        const r = await fetch('/prepare_fastq', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({parts}) });
+        // const r = await fetch('/prepare_fastq', { method:'POST' });
+        const r = await fetch('/prepare_fastq', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ N: nb, V: vb })
+        });
+        // if(!r.ok) throw new Error(j.detail || 'prepare_fastq failed');
+
+        if(!r.ok){
+          const err = await r.json().catch(()=> ({}));
+          throw new Error(err.detail || 'prepare_fastq failed');
+        }
         const j = await r.json();
-        if(!r.ok) throw new Error(j.detail || 'prepare_fastq failed');
         el('prepMsg').textContent = `OK: ${j.sample_list} (${j.lines} lines)`;
-        // 同时把 state.fastqList 指向 sample_list.txt，并刷新 config 预览
         state.fastqList = j.sample_list;
-        el('listPath').textContent = j.sample_list + ' (generated by server)';
+        state.suffix = j.suffix;  
+        // state.runId     = j.run_id;
+
+        const r2 = await fetch('/read_file?path=' + encodeURIComponent(j.sample_list));
+        const txt = r2.ok ? await r2.text() : '(preview not available)';
+        // el('listPath').textContent = j.sample_list + ' (generated by server)';
+        // // 拉取并展示内容
+        // const resp = await fetch(j.sample_list.replace('/workspace','')); // 静态不可直接读？那就走 /api/upload 的回传？ → 简便法：加只读端点
+        // let txt = '';
+        // if(resp.ok){ txt = await resp.text(); }
+        // else{
+        //   // 如果你的静态服务没暴露 /workspace，直接 GET 一个后端小接口更稳：/read_file?path=/workspace/sample_list.txt
+        //   const r2 = await fetch('/read_file?path=' + encodeURIComponent(j.sample_list));
+        //   txt = r2.ok ? await r2.text() : '(preview not available)';
+        // }
+        el('samplePreview').textContent = txt;
+        // 同步刷新 config 预览
         el('btnGen').click();
       }catch(e){ alert(e.message); }
-      finally{ el('btnPrepare').disabled = false; }
+      finally{ setBusy(btn,false,'','Build sample_list.txt'); }
     };
+
+
 
     // Upload custom adapter / pfam
     el('btnUpAd').onclick = async ()=>{
@@ -445,9 +723,11 @@
     // Helper: YAML escape (very lightweight)
     function q(s){ if(s==null) return '""'; s=String(s); return s.match(/[:#\n]/)? JSON.stringify(s): s; }
 
+
+
     // Generate config.yaml preview
     el('btnGen').onclick = ()=>{
-      const out = el('outDir').value.trim() || 'viir_run_1';
+      const baseOut = el('outDir').value.trim() || 'viir_run_1';
       const ss  = el('ssType').value;
       const pval= Number(el('pval').value || 0.01);
       const thr = Number(el('threads').value || 16);
@@ -455,17 +735,16 @@
 
       // fastq-list：优先用户上传的 list；否则尝试根据已上传的 N/V 组合生成一个最小 list 文件路径
       // —— 为了稳妥，默认仍然让用户上传现成的 fastq-list；这里仅在两组都具备R1时生成一个“临时清单路径”给出提示。
-      let fastqList = state.fastqList || '';
-      const lines = [];
-      if(state.normal.r1){ lines.push([state.normal.r1, state.normal.r2 || ''].filter(Boolean).join('\t')); }
-      if(state.virus.r1){  lines.push([state.virus.r1 , state.virus.r2  || ''].filter(Boolean).join('\t')); }
-      if(!fastqList && lines.length){
-        // 我们将建议用户用 /workspace/fastq_list.txt；真正写入文件会在“Run”时完成
-        fastqList = '/workspace/fastq_list.txt';
-      }
+
+      let fastqList = state.fastqList || '/workspace/fastq_list.txt';
+      
+      // out：若已有 suffix，则拼到独立目录里
+      const suffix = state.suffix || '';
+      const outDir = suffix ? `/workspace/viir_out/viir__${suffix}` : `/workspace/${baseOut}`;
+
 
       const yml = [
-        `out: /workspace/${out}`,
+        `out: /workspace/${outDir}`,
         `fastq-list: ${q(fastqList)}`,
         `threads: ${thr}`,
         `adapter: ${q(state.adapterPath)}`,
@@ -479,6 +758,38 @@
 
       el('cfg').value = yml;
     };
+
+    async function saveAndActivateConfig(){
+      // 先确保 cfg 文本是最新的
+      el('btnGen').click();
+      const yml = el('cfg').value|| '';
+      if(!yml.trim()){
+        throw new Error('config 为空，请先生成配置（Generate config）');
+      }
+
+      // 统一使用 runId；同时发 suffix 以兼容旧版 /save_config
+      const runId = state.runId || ('adhoc__' + Date.now());
+      const suffix = state.suffix || runId;
+      // const suffix = state.suffix || (Date.now().toString()); // 没有 suffix 也给个最小兜底
+
+      const r = await fetch('/save_config', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ yml, run_id: runId, suffix, activate: true })
+      });
+      // 失败时把原始返回打印出来，方便排错
+      if(!r.ok){
+        const txt = await r.text().catch(()=> '');
+        console.error('save_config failed:', txt);
+        let msg = 'save_config failed';
+        try{ const j = JSON.parse(txt); if(j.detail) msg = j.detail; }catch(_){}
+        throw new Error(msg);
+      }
+      const j = await r.json();
+      // if(!r.ok) throw new Error(j.detail || 'save_config failed');
+      if(j.run_id) state.runId = j.run_id;
+      return j.path; // 返回带后缀的 /configs/config__<suffix>.yaml
+    }
 
     async function ensureFastqListIfNeeded(){
       // 如果用户没上传 fastq-list，但我们已收集到 N/V 的 R1/R2，就生成文本并上传为 /workspace/fastq_list.txt
@@ -496,50 +807,193 @@
       return saved;
     }
 
-    // Run
-    el('btnRun').onclick = async ()=>{
-      try{
-        el('btnRun').disabled = true;
-        // 如果需要，自动生成 fastq_list.txt
-        await ensureFastqListIfNeeded();
+    // // Run
+    // el('btnRun').onclick = async ()=>{
+    //   try{
+    //     el('btnRun').disabled = true;
+    //     // 如果需要，自动生成 fastq_list.txt
+    //     await ensureFastqListIfNeeded();
 
-        // 从预览框拿内容，作为 file 字段上传到 /run
-        const cfgText = el('cfg').value.trim();
-        if(!cfgText){ alert('Please click "Generate config.yaml" first.'); el('btnRun').disabled=false; return; }
+    //     // 从预览框拿内容，作为 file 字段上传到 /run
+    //     const cfgText = el('cfg').value.trim();
+    //     if(!cfgText){ alert('Please click "Generate config.yaml" first.'); el('btnRun').disabled=false; return; }
 
-        const blob = new Blob([cfgText], {type:'application/x-yaml'});
-        const file = new File([blob], 'config.yaml', {type:'application/x-yaml'});
+    //     const blob = new Blob([cfgText], {type:'application/x-yaml'});
+    //     const file = new File([blob], 'config.yaml', {type:'application/x-yaml'});
 
-        const fd = new FormData(); fd.append('file', file, 'config.yaml');
-        const r = await fetch('/run', { method:'POST', body: fd });
-        const j = await r.json(); 
-        if(!r.ok){ alert('Run failed: ' + JSON.stringify(j)); }
-        else { statusPill.textContent='running'; tailLogs(); }
-      }catch(e){ alert(e.message); }
-      finally{ el('btnRun').disabled=false; }
-    };
+    //     const fd = new FormData(); fd.append('file', file, 'config.yaml');
+    //     const r = await fetch('/run', { method:'POST', body: fd });
+    //     const j = await r.json(); 
+    //     if(!r.ok){ alert('Run failed: ' + JSON.stringify(j)); }
+    //     else { statusPill.textContent='running'; tailLogs(); }
+    //   }catch(e){ alert(e.message); }
+    //   finally{ el('btnRun').disabled=false; }
+    // };
+
+    // 绑定到 Run 按钮：保存→激活→run_active
+    // el('btnRun').onclick = async ()=>{
+    //   const btn = el('btnRun');
+    //   try{
+    //     setBusy(btn, true, 'Running...');
+    //     await saveAndActivateConfig();
+    //     const r = await fetch('/run_active', { method:'POST' });
+    //     const j = await r.json();
+    //     if(!r.ok) throw new Error(j.error || j.detail || 'run_active failed');
+    //     // 让状态轮询接管按钮启用/禁用
+    //     el('statusBox').textContent = JSON.stringify(j, null, 2);
+    //   }catch(e){
+    //     alert(e.message);
+    //     setBusy(btn, false, '', 'Run');
+    //   }
+    // };
+
+
 
     // Tail logs
     async function tailLogs(){
       const s = await (await fetch('/status')).json();
       el('statusBox').textContent = JSON.stringify(s, null, 2);
-      const t = await (await fetch('/logs?tail=10')).text();
+      //const t = await (await fetch('/logs?tail=10')).text();
+      //el('logsBox').textContent = t || '(empty)';
+      const t = await (await fetch('/logs?tail=30&compact=1')).text(); // tail=30 更有信息量
       el('logsBox').textContent = t || '(empty)';
+      // 自动滚到底（体验更好）
+      const pre = el('logsBox'); pre.scrollTop = pre.scrollHeight;
       statusPill.textContent = s.status || 'unknown';
     }
-    el('btnPoll').onclick = tailLogs;
+    // el('btnPoll').onclick = tailLogs;
     el('btnRefresh').onclick = tailLogs;
 
     // List results
-    el('btnResults').onclick = async ()=>{
+    // el('btnResults').onclick = async ()=>{
+    //   const r = await fetch('/results'); 
+    //   const j = await r.json();
+    //   if(!Array.isArray(j) || j.length===0){ el('resultsBox').textContent='(no results yet)'; return; }
+    //   el('resultsBox').textContent = j.map(o=>`${o.path}  \t${o.size}B`).join('\n');
+    // };
+
+
+    async function fetchStatus(){
+      const r = await fetch('/status'); const j = await r.json();
+      el('statusBox').textContent = JSON.stringify(j, null, 2);
+      setPill(j.status);
+      return j;
+    }
+
+    async function fetchLogs(){
+      const tail = Number(el('tailLines').value);
+      const compact = el('compactLog').checked ? 1 : 0;
+      const r = await fetch(`/logs?tail=${tail}&compact=${compact}`);
+      const t = await r.text();
+      el('logMeta').textContent = `last ${tail} lines`;
+      const pre = el('logsBox');
+      pre.textContent = t || '(empty)';
+      if(el('autoScroll').checked){
+        pre.scrollTop = pre.scrollHeight;
+      }
+    }
+
+    async function fetchResults(){
       const r = await fetch('/results'); 
       const j = await r.json();
-      if(!Array.isArray(j) || j.length===0){ el('resultsBox').textContent='(no results yet)'; return; }
-      el('resultsBox').textContent = j.map(o=>`${o.path}  \t${o.size}B`).join('\n');
+      const lines = (j||[]).map(o=>{
+        const sz = (o.size/1e6).toFixed(2) + ' MB';
+        const t  = new Date((o.mtime||0)*1000).toLocaleString();
+        return `${o.path}\n  size: ${sz} | mtime: ${t}`;
+      }).join('\n\n');
+      el('resultsBox').textContent = lines || '(no results yet)';
+    }
+
+    function startPolling(){
+      stopPolling();
+      if(!el('autoPoll').checked) return;
+      const sec = Number(el('pollSec').value || 3);
+      pollTimer = setInterval(async ()=>{
+        await fetchStatus();
+        await fetchLogs();
+      }, sec*1000);
+    }
+    function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+
+    el('btnRun').onclick = async ()=>{
+      const btn = el('btnRun');
+      try{
+        setBusy(btn, true, 'Running...');
+        // 保存+激活并运行（你前面已实现的流程）
+        await saveAndActivateConfig();                  // <- 你已有的函数
+        const r = await fetch('/run_active', { method:'POST' });
+
+        if(!r.ok){
+          const txt = await r.text().catch(()=> '');
+          console.error('run_active failed:', txt);
+          let msg = 'run_active failed';
+          try{ const j = JSON.parse(txt); msg = j.detail || j.error || msg; }catch(_){}
+          throw new Error(msg);
+        }
+        const j = await r.json();
+        // if(!r.ok) throw new Error(j.detail || 'run_active failed');
+        console.log('run_active:', j);
+        await fetchStatus(); await fetchLogs(); startPolling();
+      }catch(e){ alert(e.message || e); }
+      finally{ setBusy(btn, false, '', 'Run'); }
     };
 
-    // Download
-    el('btnDownload').onclick = ()=> { window.location.href = '/download'; };
+    el('btnPollOnce').onclick = async ()=>{
+      await fetchStatus(); await fetchLogs(); await fetchResults();
+    };
+    el('autoPoll').onchange = startPolling;
+    el('pollSec').onchange  = startPolling;
+    el('tailLines').onchange = fetchLogs;
+    el('compactLog').onchange = fetchLogs;
+
+    el('btnCopyLog').onclick = async ()=>{
+      try{
+        await navigator.clipboard.writeText(el('logsBox').textContent || '');
+      }catch(e){ alert('Copy failed'); }
+    };
+    el('btnClearLog').onclick = ()=>{
+      el('logsBox').textContent = '';
+    };
+
+    el('btnResults').onclick = fetchResults;
+
+    el('btnDownload').onclick = async ()=>{
+      const preset = el('dlPreset').value;
+      const fmt    = el('dlFormat').value;
+      const btn = el('btnDownload');
+      try{
+        setBusy(btn,true,'Preparing...');
+        const r = await fetch(`/download2?preset=${encodeURIComponent(preset)}&format=${encodeURIComponent(fmt)}`);
+        if(!r.ok){
+          const j = await r.json().catch(()=>({detail:'unknown'}));
+          throw new Error(j.error || j.detail || 'download failed');
+        }
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); 
+        a.href = url; a.download = ''; 
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      }catch(e){ alert(e.message); }
+      finally{ setBusy(btn,false,'','Download'); }
+    };
+
+    el('btnShowStatus').onclick = ()=>{
+      try{
+        const raw = el('statusBox').textContent;
+        const j = JSON.parse(raw || '{}');
+        const keys = ['status','started_at','finished_at','returncode'];
+        const pretty = keys.map(k=>`${k}: ${j[k]!==undefined? j[k] : '-'}`).join('\n');
+        alert(pretty);
+      }catch(_){ /* ignore */ }
+    };
+
+    // 初始载入
+    (async ()=>{ await fetchStatus(); await fetchLogs(); await fetchResults(); })();
+
+
+
+
   </script>
 </body>
 </html>
