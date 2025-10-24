@@ -102,7 +102,7 @@ fi
 # BLAST DB：支持 "Default_db" 占位符或用户路径；我们使用“目录或前缀”都可。
 # 约定：如果是 Default_db，则使用内置小库（或你自带的目录结构）
 case "$BLASTNDB_RAW" in
-  ""|"Default_db") BLASTNDB_FASTA="$VIIR_RESOURCES/Default_db" ;;
+  ""|"Default_db") BLASTNDB_FASTA="$VIIR_RESOURCES/ViiR_DB" ;;
   *) BLASTNDB_FASTA="$(resolve_rel_to_config "$BLASTNDB_RAW")" ;;
 esac
 
@@ -229,9 +229,9 @@ else
 fi
 
 # --- Prepare BLASTN Database FASTA ---
-if [ "$BLASTNDB_FASTA" = "Default_db" ]; then
+if [ "$BLASTNDB_RAW" = "Default_db" ]; then
     # 这里只是记录变量，实际克隆和解压留给后续主流程步骤
-    BLASTNDB_FASTA="Default_db"
+    # BLASTNDB_FASTA="Default_db"
     log "[INFO] Will download/build default BLASTN database in later step."
 else
     BLASTNDB_FASTA="$(readlink -f "$BLASTNDB_FASTA")"
@@ -810,13 +810,13 @@ run_blastn() {
 
     export TRINITY_CPU="${N_THREADS}"
 
-    # if [ ${BLASTNDB_FASTA} = "Default_db" ]
-    if [ ${BLASTNDB_FASTA} = "${VIIR_RESOURCES}/Default_db" ]
+    if [ ${BLASTNDB_RAW} = "Default_db" ]
+    # if [ ${BLASTNDB_FASTA} = "${VIIR_RESOURCES}/Default_db" ]
     then
         # git clone https://github.com/YuSugihara/ViiR_DB.git
         # cd ViiR_DB
         log "[INFO] BLASTN with Default_db..."
-        cd ${VIIR_RESOURCES}/ViiR_DB
+        cd ${BLASTNDB_FASTA}
         cat ./NCBI_Virus_RefSeq_nuc-23-01-23.*.fasta.gz > ../NCBI_Virus_RefSeq_nuc-23-01-23.fasta.gz
         cd ..
         gzip -d NCBI_Virus_RefSeq_nuc-23-01-23.fasta.gz

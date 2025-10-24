@@ -8,14 +8,16 @@ import subprocess
 import threading
 import logging
 import re
+from contextlib import contextmanager
 from pathlib import Path, PurePath
 from typing import Optional, Dict, Literal, List
 import tempfile, zipfile
+from tempfile import NamedTemporaryFile
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query,BackgroundTasks, Request, Body
 from fastapi.responses import PlainTextResponse, FileResponse, JSONResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel, field_validator, Field  
 # from .settings import DATA_ROOT, PIPELINE_SH, DEFAULT_ARGS
-
+from starlette.background import BackgroundTask
 from fastapi.staticfiles import StaticFiles
 
 # -----------------------------------------------------------
@@ -41,6 +43,7 @@ SAMPLE_LIST_DIR = ROOT / "sample_lists"
 
 CONFIG_PATH = WORKSPACE / "config.yaml"
 CONFIG_DIR = ROOT / "configs"
+DEFAULT_CONFIG_FILES_FOLDER = "/opt/viir/resources/"
 
 RUN_ID_KEY = "run-id"
 # DATA_ROOT = Path(os.environ.get("VIIR_WORKFOLDER", "/workspace"))
@@ -99,6 +102,7 @@ def safe_rel(path_str: str) -> Path:
         return ROOT
     rel = Path(path_str.strip().lstrip("/"))
     p = (ROOT / rel).resolve()
+    log.info(f"[SAFE_REL] input={path_str} => resolved={p}")
     if not str(p).startswith(str(ROOT)):
         raise HTTPException(status_code=400, detail="Illegal path")
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -108,6 +112,7 @@ def infer_out_dir(config_path: Path, workspace: Path) -> Path:
     # 读取 YAML（你已经引入了 yaml.safe_load）
     cfg = read_config()  # 已有函数
     out_val = cfg.get("out")
+    log.info(f"[OUT_DIR] inferred 'out' from config.yaml: {out_val}")
     if not out_val:
         raise HTTPException(status_code=400, detail="'out' not set in config.yaml")
     p = Path(out_val)
@@ -153,6 +158,194 @@ def infer_run_id_from_cfg(cfg: dict) -> str:
 
 def has_cmd(name: str) -> bool:
     return shutil.which(name) is not None
+
+def stream_cmd(cmd: list[str], cwd: Path | None = None, chunk_size: int = 16 * 1024 * 1024):
+    """将外部命令 stdout 以生成器形式流式返回，避免落地大文件。"""
+    proc = subprocess.Popen(
+        cmd,
+        cwd=str(cwd or WORKSPACE),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        bufsize=chunk_size,
+    )
+    try:
+        while True:
+            chunk = proc.stdout.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
+        proc.wait()
+        if proc.returncode != 0:
+            err = proc.stderr.read().decode("utf-8", "ignore")
+            raise RuntimeError(f"Archive command failed: {err[:2000]}")
+    finally:
+        try:
+            proc.stdout.close()
+            proc.stderr.close()
+        except Exception:
+            pass
+
+
+def iter_files(root: Path) -> list[Path]:
+    """递归枚举 root 下所有文件。"""
+    return [p for p in root.rglob("*") if p.is_file()]
+
+def collect_lite_paths_by_folder(out_path: Path, cfg: dict) -> list[Path]:
+    """
+    从白名单目录收集文件 + 元信息（日志/配置/sample_list）。
+    """
+    WANTED_DIRS = [
+        # "10_trinity",
+        "30_count_matrix",
+        "40_DESeq2",
+        "60_fasta",
+        "70_barrnap",
+        "80_kmer",
+        "90_blastn"
+        # ... 其他你想要的文件夹
+    ]
+    run_id = infer_run_id_from_cfg(cfg)
+    picks: List[Path] = []
+    # 1) 白名单目录内文件
+    for d in WANTED_DIRS:
+        dp = out_path / d
+        if dp.is_dir():
+            picks.extend(iter_files(dp))
+    # 2) 附加元信息
+    if LOG_FILE.exists():
+        picks.append(LOG_FILE)
+    cfg_file = CONFIG_DIR / f"config__{run_id}.yaml"
+    if cfg_file.exists():
+        picks.append(cfg_file)
+    sl_guess = SAMPLE_LIST_DIR / f"sample_list__{run_id}.txt"
+    if sl_guess.exists():
+        picks.append(sl_guess)
+    return picks
+
+def safe_rel_to(p: Path, base: Path) -> Path:
+    """
+    计算相对路径；不在 base 下的文件放到 meta/ 下，避免 tar -C 时路径失效。
+    """
+    try:
+        return p.relative_to(base)
+    except ValueError:
+        return Path("meta") / p.name
+
+
+def create_staging_tree(out_dir: Path, files: list[Path]) -> Path:
+    """
+    创建 staging 目录并把 files 映射进去：
+      - 同盘：硬链接；跨盘：拷贝
+    由调用者负责删除（配合 BackgroundTask）。
+    """
+    staging = Path(tempfile.mkdtemp(prefix="viir_lite_"))
+    for src in files:
+        rel = safe_rel_to(src, out_dir)
+        dst = staging / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.link(src, dst)
+        except OSError:
+            shutil.copy2(src, dst)
+    return staging
+
+
+# @contextmanager
+# def build_staging_tree(out_path: Path, files: list[Path]):
+#     """
+#     为 lite 模式构建临时“只包含所需文件”的树：
+#     - 同盘则硬链接（极快 & 几乎不占空间）
+#     - 跨盘则拷贝
+#     退出自动清理。
+#     """
+#     staging = Path(tempfile.mkdtemp(prefix="viir_lite_"))
+#     try:
+#         for src in files:
+#             rel = safe_rel_to(src, out_path)
+#             dst = staging / rel
+#             dst.parent.mkdir(parents=True, exist_ok=True)
+#             try:
+#                 os.link(src, dst)  # 硬链接
+#             except OSError:
+#                 shutil.copy2(src, dst)  # 退化为拷贝
+#         yield staging
+#     finally:
+#         shutil.rmtree(staging, ignore_errors=True)
+
+def tar_name_and_media(fmt: str, base_name: str, lite: bool) -> tuple[list[str], str, str]:
+    """
+    返回：['tar', ...] 命令参数片段（不含 -C 和 '.'）、下载文件名、媒体类型。
+    （真正命令由 make_tar_cmd 再拼 -C base '.'）
+    """
+    suffix = "__lite" if lite else ""
+    if fmt == "tar":
+        return (["-cf", "-"], f"{base_name}{suffix}.tar", "application/x-tar")
+    if fmt == "tar.gz":
+        return (["-czf", "-"], f"{base_name}{suffix}.tar.gz", "application/gzip")
+    if fmt == "tar.zst":
+        if has_cmd("zstd"):
+            return (["--zstd", "-cf", "-"], f"{base_name}{suffix}.tar.zst", "application/zstd")
+        # 无 zstd 回退 gzip
+        return (["-czf", "-"], f"{base_name}{suffix}.tar.gz", "application/gzip")
+    raise ValueError("unsupported tar format")
+
+
+def make_tar_cmd(base_dir: Path, fmt: str, base_name: str, lite: bool) -> tuple[list[str], str, str]:
+    """
+    统一构建 tar 命令：tar -C <base_dir> <fmt_flags> - .   —— argv 永远短，不会 E2BIG
+    """
+    fmt_flags, filename, media = tar_name_and_media(fmt, base_name, lite)
+    cmd = ["tar", "-C", str(base_dir)] + fmt_flags + ["."]
+    return cmd, filename, media
+
+def zip_to_tmp(base_dir: Path, base_name: str, lite: bool) -> Path:
+    """
+    将 base_dir 写成 zip 临时文件（zip 无法像 tar 一样流式组合目录）。
+    """
+    tmpdir = Path(tempfile.gettempdir())
+    zipname = tmpdir / (f"{base_name}__lite.zip" if lite else f"{base_name}.zip")
+    if zipname.exists():
+        zipname.unlink()
+    with zipfile.ZipFile(zipname, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for p in iter_files(base_dir):
+            zf.write(p, p.relative_to(base_dir))
+    return zipname
+
+
+# -------------  log used ------
+# 正则定义：匹配典型的重复进度行
+_PATTERNS_PROGRESS = [
+    re.compile(r"^succeeded\(\d+\)\s+\d+\.\d+% completed"),  # ParaFly
+    re.compile(r"^\s*\[\d+M\]\s+Kmers parsed"),              # Jellyfish 等
+    re.compile(r"^ROUND\s*=\s*\d+,"),                        # RNA assembly 循环
+]
+
+def compress_log_lines(lines: list[str]) -> list[str]:
+    """
+    去除连续重复的进度输出，只保留最后一行。
+    """
+    filtered = []
+    last_match = None
+
+    for line in lines:
+        # 检查是否是进度类输出
+        if any(p.match(line) for p in _PATTERNS_PROGRESS):
+            last_match = line.strip()
+            continue  # 暂不写入，等遇到不同内容再输出最后一个
+        else:
+            # 遇到非进度行，先 flush 上一个进度
+            if last_match:
+                filtered.append(last_match)
+                last_match = None
+            filtered.append(line.rstrip())
+
+    # 文件末尾还有挂起的进度行
+    if last_match:
+        filtered.append(last_match)
+
+    return filtered
+
+
 
 # ====================================================================
 # Pydantic 数据模型 - 用于规范化输入和输出
@@ -202,16 +395,6 @@ class ConfigUpdateParams(BaseModel):
     model_config = {
         "populate_by_name": True,
     }
-
-    # V2 模型配置：用 model_config 字典替代 V1 的 class Config
-    # ModuleNotFoundError: No module named 'pydantic_settings'
-    # from pydantic_settings import SettingsConfigDict # 导入 V2 的配置类型
-    # model_config = SettingsConfigDict(
-    #     # 替代 V1 的 populate_by_name = True: 允许通过字段名（Python名）进行赋值
-    #     populate_by_name=True, 
-    #     # 其他可能的 V2 配置...
-    # )
-
     # 字段验证器 (Field Validator)
     @field_validator('threads')
     def threads_must_be_positive(cls, v):
@@ -219,8 +402,6 @@ class ConfigUpdateParams(BaseModel):
             raise ValueError('threads must be a positive integer')
         return v
     
-
-
 
 # -----------------------------------------------------------
 # 核心执行函数
@@ -241,7 +422,7 @@ def run_viir(extra_params: list[str]):
         "cmd": " ".join(cmd_list),
     })
 
-    WORKSPACE.mkdir(parents=True, exist_ok=True)
+    # WORKSPACE.mkdir(parents=True, exist_ok=True)
     log.info(f"[RUN] starting: {' '.join(cmd_list)}")
 
     try:
@@ -390,7 +571,6 @@ async def upload_fastq(
 
 # 数据预处理: 分割FSTAQ并生成 sample_list.txt
 @app.post("/prepare_fastq")
-# def prepare_fastq(parts: int = 3):
 def prepare_fastq(sel: dict = Body(...)):
     """
     接收: {"N": "dsRNA_3", "V": "dsRNA_4"}，仅对这两个批次处理
@@ -402,7 +582,6 @@ def prepare_fastq(sel: dict = Body(...)):
         raise HTTPException(400, "Both 'N' and 'V' batch names are required")
 
     run_id = new_run_id(nb, vb)
-
     pairs = [("N", nb), ("V", vb)]
     lines = []
 
@@ -450,7 +629,8 @@ def prepare_fastq(sel: dict = Body(...)):
 @app.get("/read_file", response_class=PlainTextResponse)
 def read_file(path: str):
     p = Path(path)
-    if not str(p).startswith(str(WORKSPACE)):
+    log.info(f"[READ_FILE] reading file at {p}, {str(p).startswith(str(WORKSPACE))} and {str(p).startswith(str(DEFAULT_CONFIG_FILES_FOLDER))}")
+    if not str(p).startswith(str(WORKSPACE)) and not str(p).startswith(str(DEFAULT_CONFIG_FILES_FOLDER)):
         raise HTTPException(400, "Only /workspace files are readable")
     if not p.exists() or not p.is_file(): raise HTTPException(404, "Not found")
     return p.read_text("utf-8", "ignore")
@@ -458,7 +638,8 @@ def read_file(path: str):
 
 
 ## 读取配置路由
-@app.get("/get_config", summary="获取当前的 ViiR 配置")
+# @app.get("/get_config", summary="获取当前的 ViiR 配置")
+@app.get("/get_config", summary="Got current ViiR config")
 def get_config_endpoint():
     """读取并返回 config.yaml 的当前内容。"""
     log.info(f"[GET] get current config at {CONFIG_PATH}")
@@ -549,6 +730,38 @@ def save_config(payload: dict = Body(...)):
     return {"ok": True, "path": str(out_cfg),"run_id": suffix,"activated": activated}
 
 
+@app.get("/api/file/{filename}", response_class=PlainTextResponse)
+async def get_file_content(filename: str):
+    """
+    根据文件名返回文件的纯文本内容。
+    """
+    # 确保只允许读取指定目录下的文件，防止路径遍历攻击
+    file_path = os.path.join(WORKSPACE, filename)
+    
+    # 检查文件是否存在
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail=f"File not found: {filename}")
+        
+    # 检查文件是否在允许的目录下
+    if not file_path.startswith(WORKSPACE):
+        raise HTTPException(status_code=403, detail="Forbidden path access")
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 返回纯文本响应
+        return PlainTextResponse(content)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {e}")
+
+
+
+
+
+
+
 # ========== 新增：用“活动配置”直接启动 ==========
 @app.post("/run_active")
 async def run_active(request: Request):
@@ -566,7 +779,6 @@ async def run_active(request: Request):
     # 简单校验活动配置是否存在
     if not CONFIG_PATH.exists():
         raise HTTPException(status_code=404, detail=f"Active config not found at {CONFIG_PATH}")
-
 
     # 兼容不同 Content-Type
     params = ""
@@ -632,7 +844,7 @@ def status():
 
 # 读取日志路由
 @app.get("/logs", response_class=PlainTextResponse)
-def logs(tail: int = 300, compact: bool = Query(True), max_bytes: int = 65536):
+def logs(tail: int = 300, compact: bool = Query(True), max_bytes: int = 65536*4):
     """读取末尾日志,compact=True 时会把 \r 进度行压成单行。"""
     log.info(f"[LOG] get log with tail {tail} at {time.asctime()}")
     if not LOG_FILE.exists():
@@ -642,12 +854,13 @@ def logs(tail: int = 300, compact: bool = Query(True), max_bytes: int = 65536):
         text = data.decode("utf-8", "ignore")
         if compact:
             # 逐行清理：保留每行中最后一次 \r 之后的内容
-            cleaned = []
-            for ln in text.splitlines():
-                if "\r" in ln:
-                    ln = ln.split("\r")[-1]
-                cleaned.append(ln)
-            text = "\n".join(cleaned[-tail:])
+            # cleaned = []
+            # for ln in text.splitlines():
+            #     if "\r" in ln:
+            #         ln = ln.split("\r")[-1]
+            #     cleaned.append(ln)
+            # text = "\n".join(cleaned[-tail:])
+            text = "\n".join(compress_log_lines(text.splitlines())[-tail*10:])
         else:
             # 维持原逻辑（按行尾）
             text = "\n".join(text.splitlines()[-tail:])
@@ -665,11 +878,14 @@ def results():
     if not out_path.exists():
         return []
     wanted = [
-        "40_DESeq2/volcano.tsv",
+        "10_trinity/trinity_assembly.Trinity.fasta",
+        "40_DEGseq2/DEGseq2_isoform_result/RSEM.isoform.counts.matrix.N_vs_V.DESeq2.DE_results",
         "60_fasta/summary_table.txt",
+        "60_fasta/all.fasta",
         "70_barrnap/rRNA_summary_table.txt",
         "80_kmer/kmer_summary_table.txt",
         "90_blastn/blastn_result.tsv",
+        "run_viir.log"
     ]
     out = [{"path": "run_viir.log", "size": LOG_FILE.stat().st_size, "mtime": LOG_FILE.stat().st_mtime}] if LOG_FILE.exists() else []
     for rel in wanted:
@@ -679,181 +895,96 @@ def results():
             out.append({"path": str(p), "size": s.st_size, "mtime": s.st_mtime})
     return out
 
+
+
+
 # 下载结果路由
-@app.get("/download")
-def download():
-    cfg = read_config()  
-    out_path = infer_out_dir(CONFIG_PATH, WORKSPACE)
-    if not out_path.exists():
-        return JSONResponse({"error": "[download func] out dir not found"}, status_code=404)
+# @app.get("/download")
+# def download():
+#     cfg = read_config()  
+#     out_path = infer_out_dir(CONFIG_PATH, WORKSPACE)
+#     if not out_path.exists():
+#         return JSONResponse({"error": "[download func] out dir not found"}, status_code=404)
 
-    run_id = infer_run_id_from_cfg(cfg)
-    zipname = f"viir_results__{run_id}.zip"
-    tmpzip = Path(tempfile.gettempdir()) / zipname
-    if tmpzip.exists(): tmpzip.unlink()
-    with zipfile.ZipFile(tmpzip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for p in out_path.rglob("*"):
-            if p.is_file():
-                zf.write(p, p.relative_to(out_path))
-    return FileResponse(tmpzip, filename=zipname, media_type="application/zip")
+#     run_id = infer_run_id_from_cfg(cfg)
+#     zipname = f"viir_results__{run_id}.zip"
+#     tmpzip = Path(tempfile.gettempdir()) / zipname
+#     if tmpzip.exists(): tmpzip.unlink()
+#     with zipfile.ZipFile(tmpzip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+#         for p in out_path.rglob("*"):
+#             if p.is_file():
+#                 zf.write(p, p.relative_to(out_path))
+#     return FileResponse(tmpzip, filename=zipname, media_type="application/zip")
 
 
-def collect_lite_paths_by_folder(out_path: Path, cfg: dict) -> list[Path]:
-    """
-    收集指定文件夹（白名单）内的所有文件。
-    """
-    WANTED_DIRS = [
-        "10_trinity",
-        "30_count_matrix",
-        "40_DESeq2",
-        "60_fasta",
-        "70_barrnap",
-        "80_kmer",
-        "90_blastn"
-        # ... 其他你想要的文件夹
-    ]
-    
-    paths_to_zip = []
-    # 1. 遍历白名单文件夹，并递归查找其中的所有文件
-    for target_dir in WANTED_DIRS:
-        # 构造目标文件夹的完整路径
-        dir_path = out_path / target_dir
-        # 检查目标文件夹是否存在
-        if dir_path.is_dir():
-            # 使用 rglob("*") 递归查找该文件夹下的所有文件
-            for p in dir_path.rglob("*"):
-                if p.is_file():
-                    paths_to_zip.append(p)
+def _add_file_header(path: Path, filename: str) -> dict:
+    st = path.stat()
+    return {
+        "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
+        "Content-Length": str(st.st_size),
+        "ETag": f'W/"{st.st_ino}-{st.st_size}-{int(st.st_mtime)}"',
+    }
 
-    # 2. 加上日志、配置、sample_list（保持不变）
-    if LOG_FILE.exists(): paths_to_zip.append(LOG_FILE)
-    run_id = infer_run_id_from_cfg(cfg)
-    cfg_file = (CONFIG_DIR / f"config__{run_id}.yaml")
-    if cfg_file.exists(): paths_to_zip.append(cfg_file)
-    sl_guess = SAMPLE_LIST_DIR / f"sample_list__{run_id}.txt"
-    if sl_guess.exists(): paths_to_zip.append(sl_guess)
-    
-    return paths_to_zip
-
-def stream_cmd(cmd: list[str], cwd: Path | None = None, chunk_size: int = 1024 * 1024 * 16):
-    proc = subprocess.Popen(cmd, cwd=cwd or WORKSPACE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=chunk_size)
-    try:
-        while True:
-            chunk = proc.stdout.read(chunk_size)
-            if not chunk: break
-            yield chunk
-        proc.wait()
-        if proc.returncode != 0:
-            err = proc.stderr.read().decode("utf-8", "ignore")
-            raise RuntimeError(f"Archive command failed: {err[:2000]}")
-    finally:
-        try:
-            proc.stdout.close(); proc.stderr.close()
-        except Exception:
-            pass
 
 
 @app.get("/download2")
-def download2(preset: str = "lite", format: str = "tar"):
+def download2(preset: str = "lite", format: str = "tar.gz"):
+    """
+    下载工件：
+      preset: lite | full
+      format: tar | tar.gz | tar.zst | zip
+    - full:对 out_dir 直接打包
+    - lite:先构建 staging 树，再对 staging 打包
+    - tar 系列:全走流式;zip:落地临时文件
+    """
     cfg = read_config()
-    out_path = infer_out_dir(CONFIG_PATH, WORKSPACE)
-    if not out_path.exists():
-        return JSONResponse({"error": "[download func] out dir not found"}, status_code=404)
+    out_dir = infer_out_dir(CONFIG_PATH, WORKSPACE)
+    if not out_dir.exists():
+        return JSONResponse({"error": "[download] out dir not found"}, status_code=404)
 
     run_id = infer_run_id_from_cfg(cfg)
-    base_name = f"viir_results__{run_id}"
+    base = f"viir_results__{run_id}"
 
-    preset = preset.lower()
-    format = format.lower()
+    preset = (preset or "").lower()
+    fmt = (format or "").lower()
     if preset not in ("lite", "full"):
         raise HTTPException(400, "preset must be lite or full")
-
-    # --- tar / tar.gz / tar.zst （推荐，流式） ---
-    if format in ("tar", "tar.gz", "tar.zst"):
-        if preset == "full":
-            # 打整个 out 目录
-            if format == "tar":
-                cmd = ["tar", "-C", str(out_path), "-cf", "-", "."]
-                filename = f"{base_name}.tar"
-                media = "application/x-tar"
-            elif format == "tar.gz":
-                cmd = ["tar", "-C", str(out_path), "-czf", "-", "."]
-                filename = f"{base_name}.tar.gz"
-                media = "application/gzip"
-            else:  # tar.zst
-                if has_cmd("zstd"):
-                    cmd = ["tar", "-C", str(out_path), "--zstd", "-cf", "-", "."]
-                else:
-                    # 退化为 tar.gz
-                    cmd = ["tar", "-C", str(out_path), "-czf", "-", "."]
-                    format = "tar.gz"
-                filename = f"{base_name}.tar.zst" if format == "tar.zst" else f"{base_name}.tar.gz"
-                media = "application/zstd" if format == "tar.zst" else "application/gzip"
-        else:
-            # lite：只打选中文件（放到临时 staging 目录下的相对路径结构）
-            files = collect_lite_paths_by_folder(out_path, cfg)
-            if not files:
-                raise HTTPException(404, "No lite artifacts found")
-            # 构造 tar 命令（传相对路径，保持扁平或按相对 out 的路径）
-            # 这里用 -T 从列表读更简单，但为流式我们直接把相对列表拼到命令
-            rels = []
-            for p in files:
-                try:
-                    rels.append(str(p.relative_to(out_path)))
-                except ValueError:
-                    # 非 out_path 下的文件（如 run_viir.log/config），放在根
-                    rels.append(str(p))
-
-            if format == "tar":
-                cmd = ["tar", "-C", str(out_path), "-cf", "-"] + rels
-                filename = f"{base_name}__lite.tar"
-                media = "application/x-tar"
-            elif format == "tar.gz":
-                cmd = ["tar", "-C", str(out_path), "-czf", "-"] + rels
-                filename = f"{base_name}__lite.tar.gz"
-                media = "application/gzip"
-            else:
-                if has_cmd("zstd"):
-                    cmd = ["tar", "-C", str(out_path), "--zstd", "-cf", "-"] + rels
-                    filename = f"{base_name}__lite.tar.zst"
-                    media = "application/zstd"
-                else:
-                    cmd = ["tar", "-C", str(out_path), "-czf", "-"] + rels
-                    filename = f"{base_name}__lite.tar.gz"
-                    media = "application/gzip"
-
-        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-        return StreamingResponse(stream_cmd(cmd), media_type=media, headers=headers)
-
-    # --- zip（保留原逻辑；可选无压缩提升速度） ---
-    elif format == "zip":
-        # 注意：zip 不支持“流式添加+流式下载”，需要先落地。40GB 会很慢且占用两倍空间。
-        compression = zipfile.ZIP_DEFLATED  # 或改成 ZIP_STORED 追求速度
-        tmpdir = Path(tempfile.gettempdir())
-        if preset == "full":
-            zipname = tmpdir / f"{base_name}.zip"
-            if zipname.exists(): zipname.unlink()
-            with zipfile.ZipFile(zipname, "w", compression=compression) as zf:
-                for p in out_path.rglob("*"):
-                    if p.is_file():
-                        zf.write(p, p.relative_to(out_path))
-            return FileResponse(zipname, filename=zipname.name, media_type="application/zip")
-        else:
-            files = collect_lite_paths_by_folder(out_path, cfg)
-            if not files:
-                raise HTTPException(404, "No lite artifacts found")
-            zipname = tmpdir / f"{base_name}__lite.zip"
-            if zipname.exists(): zipname.unlink()
-            with zipfile.ZipFile(zipname, "w", compression=compression) as zf:
-                for p in files:
-                    try:
-                        arc = p.relative_to(out_path)
-                    except ValueError:
-                        arc = Path(p.name)
-                    zf.write(p, arc)
-            return FileResponse(zipname, filename=zipname.name, media_type="application/zip")
-    else:
+    if fmt not in ("tar", "tar.gz", "tar.zst", "zip"):
         raise HTTPException(400, "format must be one of: tar, tar.gz, tar.zst, zip")
+
+    is_lite = (preset == "lite")
+
+    # 1) 准备 base_dir：full 直接用 out_dir；lite 构建 staging
+    # ✅ 新：构建 staging，但不立刻清理；延长到响应完成后
+    staging_path: Path | None = None
+    if is_lite:
+        picks = collect_lite_paths_by_folder(out_dir, cfg)
+        if not picks:
+            raise HTTPException(404, "No lite artifacts found")
+        staging_path = create_staging_tree(out_dir, picks)
+        base_dir = staging_path
+    else:
+        base_dir = out_dir
+
+    if fmt in ("tar", "tar.gz", "tar.zst"):
+        cmd, filename, media = make_tar_cmd(base_dir, fmt, base, is_lite)
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+        
+        # ✅ 新：把清理动作交给 BackgroundTask（传输完成后执行）
+        bg = BackgroundTask(shutil.rmtree, base_dir, True) if staging_path else None
+        return StreamingResponse(stream_cmd(cmd), filename=filename, media_type=media, headers=headers, background=bg)
+
+    # zip：必须落地，再清理 zip（以及 staging）
+    zip_path = zip_to_tmp(base_dir, base, is_lite)
+    if staging_path:
+        def cleanup(zip_p: Path, stage_p: Path):
+            try: os.remove(zip_p)
+            except Exception: pass
+            shutil.rmtree(stage_p, ignore_errors=True)
+        bg = BackgroundTask(cleanup, zip_path, staging_path)
+    else:
+        bg = BackgroundTask(os.remove, zip_path)
+    return FileResponse(zip_path, filename=zip_path.name, media_type="application/zip", background=bg)
 
 
 # -----------------------------------------------------------
