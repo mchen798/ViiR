@@ -16,7 +16,6 @@ from tempfile import NamedTemporaryFile
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query,BackgroundTasks, Request, Body
 from fastapi.responses import PlainTextResponse, FileResponse, JSONResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel, field_validator, Field  
-# from .settings import DATA_ROOT, PIPELINE_SH, DEFAULT_ARGS
 from starlette.background import BackgroundTask
 from fastapi.staticfiles import StaticFiles
 
@@ -70,9 +69,6 @@ log = logging.getLogger("uvicorn")
 log.setLevel(logging.INFO)
 
 # 计算静态目录的绝对路径：
-# __file__ = /workspace/api/main.py
-# BASE_DIR  = /workspace/api
-# STATIC_DIR= /workspace/app/static
 BASE_DIR   = Path(__file__).resolve().parent
 STATIC_DIR = (BASE_DIR.parent / "app" / "static").resolve()
 
@@ -249,28 +245,6 @@ def create_staging_tree(out_dir: Path, files: list[Path]) -> Path:
             shutil.copy2(src, dst)
     return staging
 
-
-# @contextmanager
-# def build_staging_tree(out_path: Path, files: list[Path]):
-#     """
-#     为 lite 模式构建临时“只包含所需文件”的树：
-#     - 同盘则硬链接（极快 & 几乎不占空间）
-#     - 跨盘则拷贝
-#     退出自动清理。
-#     """
-#     staging = Path(tempfile.mkdtemp(prefix="viir_lite_"))
-#     try:
-#         for src in files:
-#             rel = safe_rel_to(src, out_path)
-#             dst = staging / rel
-#             dst.parent.mkdir(parents=True, exist_ok=True)
-#             try:
-#                 os.link(src, dst)  # 硬链接
-#             except OSError:
-#                 shutil.copy2(src, dst)  # 退化为拷贝
-#         yield staging
-#     finally:
-#         shutil.rmtree(staging, ignore_errors=True)
 
 def tar_name_and_media(fmt: str, base_name: str, lite: bool) -> tuple[list[str], str, str]:
     """
@@ -854,12 +828,6 @@ def logs(tail: int = 300, compact: bool = Query(True), max_bytes: int = 65536*4)
         text = data.decode("utf-8", "ignore")
         if compact:
             # 逐行清理：保留每行中最后一次 \r 之后的内容
-            # cleaned = []
-            # for ln in text.splitlines():
-            #     if "\r" in ln:
-            #         ln = ln.split("\r")[-1]
-            #     cleaned.append(ln)
-            # text = "\n".join(cleaned[-tail:])
             text = "\n".join(compress_log_lines(text.splitlines())[-tail*10:])
         else:
             # 维持原逻辑（按行尾）
@@ -894,27 +862,6 @@ def results():
             s = p.stat()
             out.append({"path": str(p), "size": s.st_size, "mtime": s.st_mtime})
     return out
-
-
-
-
-# 下载结果路由
-# @app.get("/download")
-# def download():
-#     cfg = read_config()  
-#     out_path = infer_out_dir(CONFIG_PATH, WORKSPACE)
-#     if not out_path.exists():
-#         return JSONResponse({"error": "[download func] out dir not found"}, status_code=404)
-
-#     run_id = infer_run_id_from_cfg(cfg)
-#     zipname = f"viir_results__{run_id}.zip"
-#     tmpzip = Path(tempfile.gettempdir()) / zipname
-#     if tmpzip.exists(): tmpzip.unlink()
-#     with zipfile.ZipFile(tmpzip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-#         for p in out_path.rglob("*"):
-#             if p.is_file():
-#                 zf.write(p, p.relative_to(out_path))
-#     return FileResponse(tmpzip, filename=zipname, media_type="application/zip")
 
 
 def _add_file_header(path: Path, filename: str) -> dict:
