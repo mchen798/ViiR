@@ -1,0 +1,45 @@
+/* ================================
+   RUN PANEL 布局
+   ================================ */
+
+.run-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.run-card h2 {
+  margin-top: 0;
+}
+
+/* Status Row */
+.run-status-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.status-block .label {
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+/* 控制区 */
+.run-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.auto-refresh {
+  font-size: 14px;
+  color: #595959;
+}
+
+/* Download Row */
+.download-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}

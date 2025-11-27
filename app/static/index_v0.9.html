@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Web-ViiR | Minimal UI</title>
+    <style>
+    :root { 
+      /* 主题颜色 */
+      --bg: #1e293b;        /* 主背景：柔和的深蓝/灰蓝 */
+      --card: #334155;      /* 卡片/表面：比背景稍亮的深蓝/灰蓝 */
+      --ink: #f8fafc;       /* 文本颜色：接近纯白但更柔和 */
+      --muted: #94a3b8;     /* 辅助/静音文本：柔和的浅灰 */
+      
+      /* 强调色/交互色 */
+      --primary: #3b82f6;   /* 主强调色：明亮的蓝色，用于链接/按钮 */
+      --primary-hover: #60a5fa; /* 强调色悬停 */
+      
+      /* 状态色 */
+      --success: #10b981;   /* 成功/好的状态：绿色 */
+      --danger: #ef4444;    /* 错误/坏的状态：红色 */
+      --border: #475569;    /* 边框/分隔线：中等灰色 */
+    }
+    
+    /* 调整原有的CSS以匹配新的变量名和风格 */
+    *{box-sizing:border-box} html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    a{color:var(--primary);text-decoration:none}
+    
+    header{
+      position:sticky;top:0;
+      /* 使用深色 header 背景，与主背景形成对比 */
+      background:rgba(15, 23, 42, 0.9); 
+      backdrop-filter:saturate(180%) blur(10px);
+      border-bottom:1px solid var(--border);
+      z-index:5
+    }
+    header .wrap{
+      width: 90vw;             /* 总是占据视口宽度的 90% */
+      max-width: 1600px;       /* 确保内容在超宽屏上不会太散 */
+      
+      margin:0 auto;
+      padding:10px 16px;
+      display:flex;
+      align-items:center;
+      gap:16px
+    }
+    h1{font-size:18px;margin:0}
+    main{
+      width: 90vw;
+      max-width:1600px;
+      margin:0 auto;
+      padding:18px;
+      display:grid;
+      gap:16px;
+      /* 【修改点 3】核心：使用 repeat(auto-fit, minmax(最小宽度, 1fr)) 实现卡片自动多列 */
+      /* 让 .card 自动排列，最小宽度 400px，自动填充为 1fr */
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); 
+      /* 注意：如果 main 内部直接就是 .card，则此 Grid 生效。如果 main 下还有其他结构，需要调整。 */
+    
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border); /* 使用新的边框色 */
+      border-radius:12px;padding:16px
+    }
+    .grid{display:grid;gap:12px}
+    .g-2{grid-template-columns: repeat(2, minmax(0,1fr))}
+    .g-3{grid-template-columns: repeat(3, minmax(0,1fr))}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    label{display:block;font-weight:600;margin-bottom:6px;color:var(--muted)}
+    
+
+    .card-head{ display:flex; align-items:center; gap:10px; }
+    .card-head .pill{ margin-left:auto; }
+    .toolbar{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+    .toolbar.wrap{ flex-wrap:wrap; }
+    .toolbar .spacer{ flex:1; }
+    .inline{ display:inline-flex; align-items:center; gap:6px; }
+    .btn.micro{ padding:2px 8px; font-size:12px; }
+    .panel{ border:1px solid #273253; border-radius:10px; padding:8px; background:#0b1222; }
+    .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+    pre.mono{ margin:0; background:#0d1425; border:1px solid #273253; border-radius:8px; padding:10px; line-height:1.35; white-space:pre-wrap; word-break:break-word; overflow:auto; }
+    pre.tall{ max-height:380px; }
+    pre.mid{ max-height:260px; }
+
+    /* 三列自适应，在窄屏降为两列/一列 */
+    .grid.g-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .panel.span-2{ grid-column:span 2; }
+    @media (max-width: 1200px){ .grid.g-3{ grid-template-columns:1fr 1fr; } .panel.span-2{ grid-column:span 2; } }
+    @media (max-width: 800px){ .grid.g-3{ grid-template-columns:1fr; } .panel.span-2{ grid-column:span 1; } }
+
+
+
+    /* 表单元素统一使用更深的背景色以提高输入区域的辨识度 */
+    input[type="text"], input[type="number"], select, textarea{
+      width:100%;padding:10px 12px;border-radius:10px;
+      border:1px solid var(--border);
+      background:#0f172a; /* 更深的背景色 */
+      color:var(--ink);
+    }
+    input[type="file"]{color:var(--muted)}
+    textarea{min-height:120px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:12px}
+    
+    /* 主要按钮 */
+    .btn{
+      background:var(--primary); /* 使用主强调色 */
+      border:0;color:var(--ink);
+      padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;
+      transition: background-color 0.2s; /* 添加过渡效果 */
+    }
+    .btn:hover:not(:disabled) {
+      background: var(--primary-hover); /* 悬停效果 */
+    }
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    /* 次要按钮 */
+    .btn.subtle{background:var(--border);color:var(--muted)}
+    .btn.subtle:hover:not(:disabled){background:var(--card)}
+    /* 状态颜色 */
+    .bad{color:var(--danger)}
+    .ok{color:var(--success)}
+    
+    /* 代码/预格式化文本 */
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+    pre{
+      margin:0;
+      white-space:pre-wrap; /* 自动换行 */
+      word-break:break-word;
+      background:#0d1425;
+      border:1px solid #273253;
+      border-radius:10px;
+      padding:10px;
+      max-height:320px;      /* 限高可滚动 */
+      overflow:auto;
+      line-height:1.35;
+    }
+    /* 标签 */
+    .pill{
+      display:inline-block;padding:2px 8px;border-radius:999px;
+      background:var(--border); /* 使用边框色作为背景 */
+      color:var(--ink)
+    }
+    /* 分隔线 */
+    .divider{height:1px;background:var(--border);margin:6px 0 2px}
+
+
+    .gap{ gap:12px; }
+    .row.wrap{ flex-wrap:wrap; gap:8px; }
+    .block{ margin-top:10px; }
+    .field{ margin:10px 0; }
+    .w-30{ width:30ch; }
+    .w-40{ width:40ch; }
+    .w-70{ width:min(70ch, 100%); }
+    .yaml.big{ width:100%; min-height:360px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    /* 预览框高度梯度 */
+    pre.slim{ max-height:120px; }
+    pre.mid{ max-height:220px; }
+    pre.tall-2{ max-height:300px; }
+    pre.tall-3{ max-height:480px; }
+
+    /* 更柔的分隔线 */
+    .divider.soft{ border-top:1px dashed #273253; opacity:.6; }
+
+    /* Tips */
+    .tips{ color:var(--muted); font-size:.9rem; }
+
+    /* 状态 Pill 颜色 + 动画 */
+    .pill.state{ min-width:80px; text-align:center; }
+    .pill.ok{ background:#134e18; color:#eaffea; }
+    .pill.warn{ background:#735c1f; color:#fff8da; animation: pulse 1.2s linear infinite; }
+    .pill.error{ background:#6b1a1a; color:#ffecec; }
+    .pill.note{ background:#23314f; color:#d5e1ff; }
+
+    @keyframes pulse{
+      0%{ filter:brightness(1); }
+      50%{ filter:brightness(1.25); }
+      100%{ filter:brightness(1); }
+    }
+
+    /* 顶部两块面板自适应 */
+    .top-panels{ align-items:stretch; }
+    @media (max-width: 900px){
+      .w-30,.w-40,.w-70{ width:100%; }
+    }
+
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Web-ViiR (minimal)</h1>
+      <span id="health" class="pill">checking…</span>
+      <span id="status" class="pill">idle</span>
+      <div style="flex:1"></div>
+      <button class="btn subtle" id="btnRefresh" title="Refresh status/logs">Refresh</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 1) Data upload area -->
+    <section class="card" id="uploadCard">
+        <div class="card-head">
+          <h2>1) Upload Data</h2>
+          <div class="tips">Upload N & V batches; filenames will be preserved</div>
+          <!-- <p class="mono" style="color:var(--muted)">
+            Files will be saved under <b>/workspace</b> in the container. You can reference these paths in <code>config.yaml</code>.
+          </p> -->
+        </div>
+      <div class="grid g-2">
+        <div>
+          <h3>Normal group</h3>
+          <label>R1 (FASTQ.gz)</label>
+          <input type="file" id="nR1" accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <label>R2 (FASTQ.gz, optional)</label>
+          <input type="file" id="nR2" accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <button class="btn" id="btnUpN">Upload Normal</button>
+          <div class="mono" id="nPaths" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+        <div>
+          <h3>Virus group</h3>
+          <label>R1 (FASTQ.gz)</label>
+          <input type="file" id="vR1" accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <label>R2 (FASTQ.gz, optional)</label>
+          <input type="file" id="vR2" accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+          <button class="btn" id="btnUpV">Upload Virus</button>
+          <div class="mono" id="vPaths" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="row wrap ">
+        <div>
+          <h3>Optional: Upload FASTQ list (advanced)</h3>
+          <input type="file" id="fastqList" accept=".txt"/>
+          <button class="btn subtle" id="btnUpList">Upload List</button>
+          <div class="mono" id="listPath" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="block">
+          <h3>Batch upload dataset (N/V)</h3>
+        <!-- N -->
+        <div>
+          <h4>Batch upload — N</h4>
+          <div class="row wrap">  
+            <input type="text" id="batchN" class="w-30" placeholder="e.g., flower_N_dsRNA_01"/>
+            <input type="file" id="filesN" class="w-40" multiple accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+            <button class="btn" id="btnUpBatchN">Upload N batch</button>
+          </div>
+          <pre id="pickN" class="mono slim" style="max-height:120px"></pre>
+          <div class="mono" id="msgN" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+        <div class="divider soft"></div>
+        <!-- Batch V -->
+        <div>
+          <h4>Batch upload — V</h4>
+          <div class="row wrap">  
+            <input type="text" id="batchV" class="w-30" placeholder="e.g., flower_CMV_dsRNA_02"/>
+            <input type="file" id="filesV" class="w-40" multiple accept=".fq,.fastq,.fq.gz,.fastq.gz"/>
+            <button class="btn" id="btnUpBatchV">Upload V batch</button>
+          </div>
+          <pre id="pickV" class="mono slim" style="max-height:120px"></pre>
+          <div class="mono" id="msgV" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+
+        <div class="divider soft"></div>
+        
+        <!-- Prepare -->
+        <div class="block">
+          <h3>Prepare FASTQ (seqkit split2)</h3>
+          <div class="row wrap">
+            <span class="pill note">Split parts: 3 (fixed)</span>
+            <button class="btn" id="btnPrepare">Build sample_list.txt</button>
+            <span id="prepMsg" class="mono dim"></span>
+          </div>
+          <div class="mono" id="prepMsg" style="margin-top:8px;color:var(--muted)"></div>
+        </div>
+        <div>
+          <h3>sample_list preview</h3>
+          <input type="text" id="faqListPath" value="">
+          <pre id="samplePreview" class="mono tall-2" style="max-height:180px"></pre>
+        </div>
+      </div>
+
+
+    </section>
+
+    <!-- 2) Config options -->
+    <section class="card" id="configCard">
+      <div class="card-head">
+        <h2>2) Configuration</h2>
+        <div class="tips">Edit parameters; preview & save</div>
+      </div>
+
+      <!-- 快速参数（两列，自适应） -->
+      <div class="grid g-2 gap">
+        <div>
+          <label>Output directory (inside /workspace)</label>
+          <input type="text" id="outDir" value="viir_run_1"/>
+        </div>
+
+        <div class="field">
+          <label>SS_lib_type</label>
+          <select id="ssType">
+            <option value="No">No</option>
+            <option value="FR">FR</option>
+            <option value="RF">RF</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>pvalue</label>
+          <input id="pval" type="number" value="0.01" step="0.001"/>
+        </div>
+        <div class="field">
+          <label>threads</label>
+          <input id="threads" type="number" value="16" min="1"/>
+        </div>
+        <div class="field">
+          <label>max-memory</label>
+          <input id="maxMem" type="text" value="64G"/>
+        </div>
+
+      </div>
+
+      <!-- 长路径字段独占整行 -->
+      <div class="field">
+        <label>NGS adapters</label>
+        <div class="row wrap">
+          <label><input type="radio" name="adSel" value="default" checked/> Use default</label>
+          <label><input type="radio" name="adSel" value="custom"/> Custom</label>
+        </div>
+        <input type="text" class="mono" id="adapterPath" value="/opt/viir/resources/adapters.fasta" readonly>
+        <!-- <div class="mono" id="adDefault">/opt/viir/resources/adapters.fasta</div> -->
+        <div class="row" id="adCustomRow" style="display:none">
+          <input type="file" id="adCustomFile" accept=".fa,.fasta"/>
+          <button class="btn subtle" id="btnUpAd">Upload adapter</button>
+        </div>
+        <div class="row wrap">
+          <button class="btn-file-preview" id="btnPreviewAdapter" data-input-id="adapterPath" data-target-id="adapterPreview">Preview</button>
+        </div>
+        <textarea id="adapterPreview" class="mono tall-3 hide" readonly></textarea>
+        <div class="mono" id="adPath" style="color:var(--muted)"></div>
+      </div>
+
+      <div class="field">
+        <label>Pfam list</label>
+        <div class="row">
+          <label><input type="radio" name="pfSel" value="default" checked/> Use default</label>
+          <label><input type="radio" name="pfSel" value="custom"/> Custom</label>
+        </div>
+        <input type="text" class="mono" id="pfamPath" value="/opt/viir/resources/Pfam_IDs_list.txt" readonly>
+        <!-- <div class="mono" id="pfDefault">/opt/viir/resources/Pfam_IDs_list.txt</div> -->
+        <div class="row" id="pfCustomRow" style="display:none">
+          <input type="file" id="pfCustomFile" accept=".txt"/>
+          <button class="btn subtle" id="btnUpPf">Upload Pfam list</button>
+        </div>
+        <div class="row wrap">
+          <button class="btn-file-preview" id="btnPreviewPfam" data-input-id="pfamPath" data-target-id="PfamPreview">Preview</button>
+        </div>
+        <textarea id="PfamPreview" class="mono slim hide" readonly></textarea>
+        <div class="mono" id="pfPath" style="color:var(--muted)"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <div class="row wrap">
+          <label>blastndb (default only)</label>
+          <div class="mono">/opt/viir/resources/ViiR_DB</div>
+        </div>
+      </div>
+
+      <!-- fastq-list 展示 -->
+      <div class="field">
+        <label>fastq-list</label>
+        <div class="row wrap">
+          <button class="btn-file-preview" id="btnPreviewFaqList" data-input-id="faqListPath" data-target-id="FaqListPreview">Preview</button>
+        </div>
+        <div class="row wrap">
+
+          <!-- <span id="listPath" class="mono dim">not set</span> -->
+          <textarea id="FaqListPreview" class="mono slim hide" readonly></textarea>
+        </div>
+      </div>
+
+
+      <!-- YAML 预览加高 -->
+      <div class="block">
+        <div class="row">
+          <button class="btn" id="btnGen">Generate config.yaml</button>
+          <button class="btn subtle" id="btnInsertPaths">Use current paths</button>
+        </div>
+        <!-- <pre id="cfg" class="yaml big" spellcheck="false"></pre> -->
+        <!-- <textarea id="cfg" readonly></textarea> -->
+         <textarea id="cfg"></textarea>
+      </div>
+
+      <!-- <div class="field">
+        <h3>sample_list preview</h3>
+        <div class="row wrap">
+          <textarea id="samplePreview" class="mono tall-2" style="max-height:180px" readonly></textarea>
+        </div>
+      </div> -->
+
+    </section>
+
+    <!-- 3) Run & Monitor -->
+    <section class="card" id="runCard">
+      <div class="card-head">
+        <h2>3) Run & Monitor</h2>
+        <div class="pill state" id="statusPill">idle</div>
+      </div>
+
+      <!-- Controls Row 1: run & auto-poll -->
+      <div class="toolbar wrap">
+        <button class="btn" id="btnRun">Run</button>
+        <button class="btn subtle" id="btnPollOnce" title="Fetch once">Refresh</button>
+        <label class="inline"><input type="checkbox" id="autoPoll" />Auto refresh</label>
+        <select id="pollSec" title="Poll interval (sec)">
+          <option value="2">2s</option>
+          <option value="3" selected>3s</option>
+          <option value="5">5s</option>
+          <option value="10">10s</option>
+        </select>
+        <div class="spacer"></div>
+
+        <label class="inline">Preset
+          <select id="dlPreset"><option value="lite" selected>Lite</option><option value="full">Full</option></select>
+        </label>
+        <label class="inline">Format
+          <select id="dlFormat"><option>tar</option><option selected>tar.gz</option><option>tar.zst</option><option>zip</option></select>
+        </label>
+        <button class="btn" id="btnDownload">Download</button>
+      </div>
+
+      <!-- 上：Status + Results -->
+      <div class="grid g-2 gap top-panels">
+        <div class="panel">
+          <div class="panel-head">
+            <label>Status</label>
+            <button class="btn micro subtle" id="btnShowStatus">Pretty</button>
+          </div>
+          <pre id="statusBox" class="mono mid"></pre>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <label>Results</label>
+            <button class="btn micro subtle" id="btnResults">List</button>
+          </div>
+          <pre id="resultsBox" class="mono mid"></pre>
+        </div>
+      </div>
+
+      <!-- 下：Logs 独占整行 -->
+      <div class="panel" style="margin-top:10px">
+        <div class="panel-head">
+          <label>Logs (<span id="logMeta">last 200 lines</span>)</label>
+          <div class="row wrap">
+            <label class="inline">Tail
+              <select id="tailLines"><option>50</option><option selected>200</option><option>500</option><option>1000</option></select>
+            </label>
+            <label class="inline"><input type="checkbox" id="compactLog" checked/> Compact</label>
+            <label class="inline"><input type="checkbox" id="autoScroll" checked/> Auto scroll</label>
+            <button class="btn micro subtle" id="btnCopyLog">Copy</button>
+            <button class="btn micro subtle" id="btnClearLog">Clear</button>
+          </div>
+        </div>
+        <pre id="logsBox" class="mono tall-3"></pre>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const el = id => document.getElementById(id);
+    const healthEl = el('health'), statusPill = el('status');
+    let pollTimer = null;
+
+    // state
+    const state = {
+      normal: { r1:null, r2:null },
+      virus : { r1:null, r2:null },
+      fastqList:null,
+      adapterPath:'/opt/viir/resources/adapters.fasta',
+      pfamPath:'/opt/viir/resources/Pfam_IDs_list.txt',
+      blastPath:'/opt/viir/resources/ViiR_DB',
+    };
+
+    async function ping(){
+      try{
+        const r = await fetch('/healthz'); const t = await r.text();
+        healthEl.textContent = t.trim()==='ok' ? 'healthy' : 'unhealthy';
+        healthEl.className = 'pill ' + (t.trim()==='ok' ? 'ok':'bad');
+      }catch(e){ healthEl.textContent='down'; healthEl.className='pill bad'; }
+    }
+    ping();
+
+
+    function setBusy(btn, busy, textBusy, textIdle){
+      btn.disabled = !!busy;
+      if(textBusy && busy) btn.textContent = textBusy;
+      if(textIdle && !busy) btn.textContent = textIdle;
+    }
+
+    function setPill(status){
+      const pill = el('statusPill');
+      pill.textContent = status || 'unknown';
+      pill.classList.remove('ok','warn','error');
+      if(status==='running'){ pill.classList.add('warn'); }
+      else if(status==='failed'){ pill.classList.add('error'); }
+      else { pill.classList.add('ok'); }
+      // 运行中禁用 Run
+      el('btnRun').disabled = (status==='running');
+    }
+
+
+    // --- Upload helper ---
+    async function uploadFile(file){
+      const fd = new FormData(); fd.append('file', file, file.name);
+      const r = await fetch('/api/upload', { method:'POST', body: fd });
+      if(!r.ok) throw new Error('upload failed');
+      const j = await r.json();
+      return j.saved; // absolute path in /workspace
+    }
+
+    // show/hide custom rows
+    function wireRadios(){
+      const adRadios = document.querySelectorAll('input[name="adSel"]');
+      const pfRadios = document.querySelectorAll('input[name="pfSel"]');
+      adRadios.forEach(r => r.onchange = ()=> {
+        el('adCustomRow').style.display = (r.value==='custom' && r.checked) ? 'flex':'none';
+      });
+      pfRadios.forEach(r => r.onchange = ()=> {
+        el('pfCustomRow').style.display = (r.value==='custom' && r.checked) ? 'flex':'none';
+      });
+    }
+    wireRadios();
+
+    // Upload buttons
+    el('btnUpN').onclick = async ()=>{
+      const r1 = el('nR1').files[0]; 
+      const r2 = el('nR2').files[0];
+      if(!r1){ alert('Normal R1 is required'); return; }
+      el('btnUpN').disabled = true;
+      try{
+        const p1 = await uploadFile(r1);
+        state.normal.r1 = p1;
+        let msg = `R1 => ${p1}`;
+        if(r2){ const p2 = await uploadFile(r2); state.normal.r2 = p2; msg += `\nR2 => ${p2}`; }
+        el('nPaths').textContent = msg;
+      }catch(e){ alert(e.message); }
+      finally{ el('btnUpN').disabled=false; }
+    };
+
+    el('btnUpV').onclick = async ()=>{
+      const r1 = el('vR1').files[0]; const r2 = el('vR2').files[0];
+      if(!r1){ alert('Virus R1 is required'); return; }
+      el('btnUpV').disabled = true;
+      try{
+        const p1 = await uploadFile(r1);
+        state.virus.r1 = p1;
+        let msg = `R1 => ${p1}`;
+        if(r2){ const p2 = await uploadFile(r2); state.virus.r2 = p2; msg += `\nR2 => ${p2}`; }
+        el('vPaths').textContent = msg;
+      }catch(e){ alert(e.message); }
+      finally{ el('btnUpV').disabled=false; }
+    };
+
+    el('btnUpList').onclick = async ()=>{
+      const f = el('fastqList').files[0];
+      if(!f){ alert('Pick a .txt fastq list'); return; }
+      el('btnUpList').disabled = true;
+      try{
+        const saved = await uploadFile(f);
+        state.fastqList = saved;
+        el('listPath').textContent = saved;
+      }catch(e){ alert(e.message); }
+      finally{ el('btnUpList').disabled=false; }
+    };
+
+    function listPicked(idInput, idPre){
+      const fs = el(idInput).files;
+      el(idPre).textContent = [...fs].map(f=>`${f.name}  (${(f.size/1e6).toFixed(2)} MB)`).join('\n') || '(no files selected)';
+    }
+    el('filesN').onchange = ()=> listPicked('filesN','pickN');
+    el('filesV').onchange = ()=> listPicked('filesV','pickV');
+
+
+
+
+    // Batch upload
+    async function uploadBatch(group, batch, files, msgEl, btnEl){
+      if(!batch){ alert('Please input batch name'); return; }
+      if(!files.length){ alert('Pick FASTQ files'); return; }
+      setBusy(btnEl,true,'Uploading...');
+      const totalBytes = [...files].reduce((s,f)=>s+f.size,0);
+      const t0 = performance.now();
+      try{
+        const fd = new FormData();
+        fd.append('group', group);
+        fd.append('batch', batch);
+        for(const f of files) fd.append('files', f, f.name);
+        const r = await fetch('/api/upload_fastq', { method:'POST', body: fd });
+        const j = await r.json();
+        if(!r.ok) throw new Error(j.detail || 'upload_fastq failed');
+
+        const dt = (performance.now()-t0)/1000;
+        const mbps = (totalBytes/1e6/dt).toFixed(1);
+        msgEl.textContent = `Saved ${j.count} files → ${j.dir}\nTime: ${dt.toFixed(1)}s  |  Avg: ${mbps} MB/s`;
+      }catch(e){ alert(e.message); }
+      finally{ setBusy(btnEl,false,'','Upload'); }
+    }
+    el('btnUpBatchN').onclick = ()=> uploadBatch('N', el('batchN').value.trim(), el('filesN').files, el('msgN'), el('btnUpBatchN'));
+    el('btnUpBatchV').onclick = ()=> uploadBatch('V', el('batchV').value.trim(), el('filesV').files, el('msgV'), el('btnUpBatchV'));
+
+
+    // 一键准备（seqkit split2 & sample_list）
+    // el('btnPrepare').onclick = async ()=>{
+    //   const parts = Number(el('parts').value || 3);
+    //   el('btnPrepare').disabled = true;
+    //   try{
+    //     const r = await fetch('/prepare_fastq', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({parts}) });
+    //     const j = await r.json();
+    //     if(!r.ok) throw new Error(j.detail || 'prepare_fastq failed');
+    //     el('prepMsg').textContent = `OK: ${j.sample_list} (${j.lines} lines)`;
+    //     // 同时把 state.fastqList 指向 sample_list.txt，并刷新 config 预览
+    //     state.fastqList = j.sample_list;
+    //     el('listPath').textContent = j.sample_list + ' (generated by server)';
+    //     el('btnGen').click();
+    //   }catch(e){ alert(e.message); }
+    //   finally{ el('btnPrepare').disabled = false; }
+    // };
+
+    el('btnPrepare').onclick = async ()=>{
+      const btn = el('btnPrepare');
+
+      // 读取批次名：确保你的页面上有这两个输入框的 id
+      const nb = (el('batchN')?.value || '').trim();
+      const vb = (el('batchV')?.value || '').trim();
+      if(!nb || !vb){
+        // alert('请先填写 N 与 V 的 batch 名（如 dsRNA_3 / dsRNA_4）。');
+        alert('Please give a name for upload N sample and V (e.g. xxx_dsRNA_3 / xxx_dsRNA_4).');
+        return;
+      }
+      setBusy(btn,true,'Building...');
+      try{
+        // const r = await fetch('/prepare_fastq', { method:'POST' });
+        const r = await fetch('/prepare_fastq', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ N: nb, V: vb })
+        });
+        // if(!r.ok) throw new Error(j.detail || 'prepare_fastq failed');
+        if(!r.ok){
+          const err = await r.json().catch(()=> ({}));
+          throw new Error(err.detail || 'prepare_fastq failed');
+        }
+        const j = await r.json();
+        el('prepMsg').textContent = `OK: ${j.sample_list} (${j.lines} lines)`;
+        state.fastqList = j.sample_list;
+        state.suffix = j.suffix;  
+        // state.runId     = j.run_id;
+        el('faqListPath').value = j.sample_list;
+        const r2 = await fetch('/read_file?path=' + encodeURIComponent(j.sample_list));
+        const txt = r2.ok ? await r2.text() : '(preview not available)';
+        el('samplePreview').textContent = txt;
+        // 同步刷新 config 预览
+        el('btnGen').click();
+      }catch(e){ alert(e.message); }
+      finally{ setBusy(btn,false,'','Build sample_list.txt'); }
+    };
+
+    // Upload custom adapter / pfam
+    el('btnUpAd').onclick = async ()=>{
+      const f = el('adCustomFile').files[0];
+      if(!f){ alert('pick adapter fasta'); return; }
+      el('btnUpAd').disabled = true;
+      try{ state.adapterPath = await uploadFile(f); el('adPath').textContent = state.adapterPath; }
+      catch(e){ alert(e.message); }
+      finally{ el('btnUpAd').disabled = false; }
+    };
+    el('btnUpPf').onclick = async ()=>{
+      const f = el('pfCustomFile').files[0];
+      if(!f){ alert('pick Pfam list'); return; }
+      el('btnUpPf').disabled = true;
+      try{ state.pfamPath = await uploadFile(f); el('pfPath').textContent = state.pfamPath; }
+      catch(e){ alert(e.message); }
+      finally{ el('btnUpPf').disabled = false; }
+    };
+
+    // Helper: YAML escape (very lightweight)
+    function q(s){ if(s==null) return '""'; s=String(s); return s.match(/[:#\n]/)? JSON.stringify(s): s; }
+
+    // Generate config.yaml preview
+    el('btnGen').onclick = ()=>{
+      const baseOut = el('outDir').value.trim() || 'viir_run_1';
+      const ss  = el('ssType').value;
+      const pval= Number(el('pval').value || 0.01);
+      const thr = Number(el('threads').value || 16);
+      const mem = el('maxMem').value.trim() || '64G';
+
+      // fastq-list：优先用户上传的 list；否则尝试根据已上传的 N/V 组合生成一个最小 list 文件路径
+      // —— 为了稳妥，默认仍然让用户上传现成的 fastq-list；这里仅在两组都具备R1时生成一个“临时清单路径”给出提示。
+
+      let fastqList = state.fastqList || '/workspace/fastq_list.txt';
+      
+      // out：若已有 suffix，则拼到独立目录里
+      const suffix = state.suffix || '';
+      const outDir = suffix ? `${baseOut}/viir__${suffix}` : `${baseOut}`;
+
+      const yml = [
+        `out: /workspace/${outDir}`,
+        // `fastq-list: ${q(fastqList)}`,
+        `fastq-list: /workspace/sample_lists/sample_list__dsRNA01_vs_dsRNA02__20251022-073944.txt`,
+        `threads: ${thr}`,
+        `adapter: ${q(state.adapterPath)}`,
+        `pfam: ${q(state.pfamPath)}`,
+        `hmm-folder: /opt/viir/resources/hmm_models`,
+        `SS-lib-type: ${q(ss)}`,
+        `blastndb: /opt/viir/resources/ViiR_DB`,
+        `pvalue: ${pval}`,
+        `max-memory: ${q(mem)}`
+      ].join('\n');
+
+      el('cfg').value = yml;
+    };
+
+    // 将 UI 输入回写到 state（点一下就把文本框里的路径设为当前路径）
+    el('btnInsertPaths').onclick = ()=>{
+      state.adapterPath = (el('adapterPath')?.value || '').trim();
+      state.pfamPath    = (el('pfamPath')?.value || '').trim();
+      el('btnGen').click();
+    };
+
+    /**
+     * 通用文件预览函数：根据按钮上的 data 属性读取文件并显示。
+     * @param {HTMLElement} buttonElement - 当前点击的按钮元素。
+     */
+    async function genericPreviewFile(buttonElement) {
+        const inputId = buttonElement.getAttribute('data-input-id');
+        const preId = buttonElement.getAttribute('data-target-id');
+        if (!inputId || !preId) {
+            console.error("预览按钮缺少 data 属性配置。");
+            return;
+        }
+        const pathInput = el(inputId);
+        const box = el(preId);
+        
+        // 确保 DOM 元素存在
+        if (!pathInput || !box) return;
+        const filePath = (pathInput.value || '').trim();
+        
+        // 1. 处理路径为空的情况
+        if (!filePath) { 
+            box.textContent = '(文件路径为空)';
+            box.classList.remove('hide');
+            return; 
+        }
+        
+        // 2. 设置加载状态
+        const originalText = buttonElement.textContent;
+        buttonElement.disabled = true;
+        buttonElement.textContent = 'Loading...';
+        box.textContent = `Loading ${filePath}...`;
+        box.classList.remove('hide');
+
+        try {
+            // 3. 发起请求 (使用 encodeURIComponent 确保路径安全)
+            const url = '/read_file?path=' + encodeURIComponent(filePath);
+            const r = await fetch(url);
+            // 4. 更新内容
+            if (r.ok) {
+                box.textContent = await r.text();
+            } else {
+                // 如果后端返回错误 (如 404/400)，尝试获取错误详情
+                const errorText = await r.text().catch(() => `HTTP ${r.status}`);
+                box.textContent = `Load fail: (${r.status}): ${errorText.substring(0, 80)}...`;
+            }
+        } catch (e) {
+            // 5. 处理网络错误
+            box.textContent = `Network error: ${e.message}`;
+        } finally {
+            // 6. 恢复按钮状态
+            buttonElement.disabled = false;
+            buttonElement.textContent = originalText;
+        }
+    }
+
+    // --- 通用事件绑定 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // 自动找到所有带有特定类名的预览按钮
+        const previewButtons = document.querySelectorAll('.btn-file-preview');
+
+        previewButtons.forEach(button => {
+            // 绑定到通用的 genericPreviewFile 函数
+            button.addEventListener('click', () => {
+                genericPreviewFile(button);
+            });
+        });
+    });
+
+    async function saveAndActivateConfig(){
+      // 先确保 cfg 文本是最新的
+      el('btnGen').click();
+      const yml = el('cfg').value|| '';
+      if(!yml.trim()){
+        throw new Error('config 为空，请先生成配置（Generate config）');
+      }
+
+      // 统一使用 runId；同时发 suffix 以兼容旧版 /save_config
+      const runId = state.runId || ('adhoc__' + Date.now());
+      const suffix = state.suffix || runId;
+      // const suffix = state.suffix || (Date.now().toString()); // 没有 suffix 也给个最小兜底
+
+      const r = await fetch('/save_config', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ yml, run_id: runId, suffix, activate: true })
+      });
+      // 失败时把原始返回打印出来，方便排错
+      if(!r.ok){
+        const txt = await r.text().catch(()=> '');
+        console.error('save_config failed:', txt);
+        let msg = 'save_config failed';
+        try{ const j = JSON.parse(txt); if(j.detail) msg = j.detail; }catch(_){}
+        throw new Error(msg);
+      }
+      const j = await r.json();
+      // if(!r.ok) throw new Error(j.detail || 'save_config failed');
+      if(j.run_id) state.runId = j.run_id;
+      return j.path; // 返回带后缀的 /configs/config__<suffix>.yaml
+    }
+
+    // async function ensureFastqListIfNeeded(){
+    //   // 如果用户没上传 fastq-list，但我们已收集到 N/V 的 R1/R2，就生成文本并上传为 /workspace/fastq_list.txt
+    //   if(state.fastqList) return state.fastqList;
+    //   const pairs = [];
+    //   if(state.normal.r1) pairs.push([state.normal.r1, state.normal.r2].filter(Boolean).join('\t'));
+    //   if(state.virus.r1)  pairs.push([state.virus.r1 , state.virus.r2 ].filter(Boolean).join('\t'));
+    //   if(!pairs.length) return null;
+
+    //   const blob = new Blob([pairs.join('\n')+'\n'], {type:'text/plain'});
+    //   const file = new File([blob], 'fastq_list.txt', {type:'text/plain'});
+    //   const saved = await uploadFile(file);
+    //   state.fastqList = saved;
+    //   el('listPath').textContent = saved + ' (auto-generated)';
+    //   return saved;
+    // }
+    // // Run
+    // el('btnRun').onclick = async ()=>{
+    //   try{
+    //     el('btnRun').disabled = true;
+    //     // 如果需要，自动生成 fastq_list.txt
+    //     await ensureFastqListIfNeeded();
+    //     // 从预览框拿内容，作为 file 字段上传到 /run
+    //     const cfgText = el('cfg').value.trim();
+    //     if(!cfgText){ alert('Please click "Generate config.yaml" first.'); el('btnRun').disabled=false; return; }
+
+    //     const blob = new Blob([cfgText], {type:'application/x-yaml'});
+    //     const file = new File([blob], 'config.yaml', {type:'application/x-yaml'});
+
+    //     const fd = new FormData(); fd.append('file', file, 'config.yaml');
+    //     const r = await fetch('/run', { method:'POST', body: fd });
+    //     const j = await r.json(); 
+    //     if(!r.ok){ alert('Run failed: ' + JSON.stringify(j)); }
+    //     else { statusPill.textContent='running'; tailLogs(); }
+    //   }catch(e){ alert(e.message); }
+    //   finally{ el('btnRun').disabled=false; }
+    // };
+
+
+    // Tail logs
+    async function tailLogs(){
+      const s = await (await fetch('/status')).json();
+      el('statusBox').textContent = JSON.stringify(s, null, 2);
+      //const t = await (await fetch('/logs?tail=10')).text();
+      //el('logsBox').textContent = t || '(empty)';
+      const t = await (await fetch('/logs?tail=30&compact=1')).text(); // tail=30 更有信息量
+      el('logsBox').textContent = t || '(empty)';
+      // 自动滚到底（体验更好）
+      const pre = el('logsBox'); pre.scrollTop = pre.scrollHeight;
+      statusPill.textContent = s.status || 'unknown';
+    }
+    el('btnRefresh').onclick = tailLogs;
+
+    async function fetchStatus(){
+      const r = await fetch('/status'); const j = await r.json();
+      el('statusBox').textContent = JSON.stringify(j, null, 2);
+      setPill(j.status);
+      return j;
+    }
+
+    async function fetchLogs(){
+      const tail = Number(el('tailLines').value);
+      const compact = el('compactLog').checked ? 1 : 0;
+      const r = await fetch(`/logs?tail=${tail}&compact=${compact}`);
+      const t = await r.text();
+      el('logMeta').textContent = `last ${tail} lines`;
+      const pre = el('logsBox');
+      pre.textContent = t || '(empty)';
+      if(el('autoScroll').checked){
+        pre.scrollTop = pre.scrollHeight;
+      }
+    }
+
+    async function fetchResults(){
+      const r = await fetch('/results'); 
+      const j = await r.json();
+      const lines = (j||[]).map(o=>{
+        const sz = (o.size/1e6).toFixed(2) + ' MB';
+        const t  = new Date((o.mtime||0)*1000).toLocaleString();
+        return `${o.path}\n  size: ${sz} | mtime: ${t}`;
+      }).join('\n\n');
+      el('resultsBox').textContent = lines || '(no results yet)';
+    }
+
+    function startPolling(){
+      stopPolling();
+      if(!el('autoPoll').checked) return;
+      const sec = Number(el('pollSec').value || 3);
+      pollTimer = setInterval(async ()=>{
+        await fetchStatus();
+        await fetchLogs();
+      }, sec*1000);
+    }
+    function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+
+    el('btnRun').onclick = async ()=>{
+      const btn = el('btnRun');
+      try{
+        setBusy(btn, true, 'Running...');
+        // 保存+激活并运行（你前面已实现的流程）
+        await saveAndActivateConfig();                  // <- 你已有的函数
+        const r = await fetch('/run_active', { method:'POST' });
+
+        if(!r.ok){
+          const txt = await r.text().catch(()=> '');
+          console.error('run_active failed:', txt);
+          let msg = 'run_active failed';
+          try{ const j = JSON.parse(txt); msg = j.detail || j.error || msg; }catch(_){}
+          throw new Error(msg);
+        }
+        const j = await r.json();
+        // if(!r.ok) throw new Error(j.detail || 'run_active failed');
+        console.log('run_active:', j);
+        await fetchStatus(); await fetchLogs(); startPolling();
+      }catch(e){ alert(e.message || e); }
+      finally{ setBusy(btn, false, '', 'Run'); }
+    };
+
+    el('btnPollOnce').onclick = async ()=>{
+      await fetchStatus(); await fetchLogs(); await fetchResults();
+    };
+    el('autoPoll').onchange = startPolling;
+    el('pollSec').onchange  = startPolling;
+    el('tailLines').onchange = fetchLogs;
+    el('compactLog').onchange = fetchLogs;
+
+    el('btnCopyLog').onclick = async ()=>{
+      try{
+        await navigator.clipboard.writeText(el('logsBox').textContent || '');
+      }catch(e){ alert('Copy failed'); }
+    };
+    el('btnClearLog').onclick = ()=>{
+      el('logsBox').textContent = '';
+    };
+
+    el('btnResults').onclick = fetchResults;
+
+    el('btnDownload').onclick = async ()=>{
+      const preset = el('dlPreset').value;
+      const fmt    = el('dlFormat').value;
+      const btn = el('btnDownload');
+      try{
+        setBusy(btn,true,'Preparing...');
+        window.location.href = `/download2?preset=${encodeURIComponent(preset)}&format=${encodeURIComponent(fmt)}`;
+      }catch(e){ alert(e.message); }
+      finally{ setBusy(btn,false,'','Download'); }
+    };
+
+    el('btnShowStatus').onclick = ()=>{
+      try{
+        const raw = el('statusBox').textContent;
+        const j = JSON.parse(raw || '{}');
+        const keys = ['status','started_at','finished_at','returncode'];
+        const pretty = keys.map(k=>`${k}: ${j[k]!==undefined? j[k] : '-'}`).join('\n');
+        alert(pretty);
+      }catch(_){ /* ignore */ }
+    };
+
+    // 初始载入
+    (async ()=>{ await fetchStatus(); await fetchLogs(); await fetchResults(); })();
+
+
+
+
+  </script>
+</body>
+</html>

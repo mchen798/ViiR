@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ViiR · Web</title>
+<style>
+  :root{
+    --bg:#f6f8fb; --card:#fff; --ink:#1f2937; --muted:#6b7280;
+    --pri:#2563eb; --pri-weak:#dbeafe;
+    --ok:#16a34a; --warn:#f59e0b; --err:#dc2626; --inprog:#3b82f6;
+    --bd:#e5e7eb; --chip:#eef2ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;}
+  a{color:var(--pri);text-decoration:none}
+  header{height:56px;background:#fff;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:24px;padding:0 20px;position:sticky;top:0;z-index:5}
+  header .brand{font-weight:700;display:flex;align-items:center;gap:10px}
+  .v{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,#10b981,#2563eb)}
+  nav a{margin-right:16px;color:#111827}
+  .lang{margin-left:auto}
+  .container{max-width:1080px;margin:20px auto;padding:0 16px}
+  .hero{background:linear-gradient(180deg,#f5f7ff,#ffffff);border:1px solid var(--bd);border-radius:14px;padding:28px;box-shadow:0 2px 8px rgba(16,24,40,.06)}
+  .hero h1{margin:0 0 8px;font-size:28px}
+  .muted{color:var(--muted)}
+  .btn{appearance:none;border:0;background:var(--pri);color:#fff;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn.subtle{background:#eef2ff;color:#1d4ed8}
+  .btn.ghost{background:#fff;color:#1d4ed8;border:1px solid var(--bd)}
+  .grid{display:grid;gap:16px}
+  .g-2{grid-template-columns:1fr 1fr}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px}
+  .list{display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;align-items:center;gap:10px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid var(--bd);background:#fff}
+  .pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:12px}
+  .status.completed{background:rgba(22,163,74,.1);color:var(--ok)}
+  .status.inprog{background:rgba(59,130,246,.1);color:var(--inprog)}
+  .status.pending{background:#f3f4f6;color:#6b7280}
+  .status.failed{background:rgba(220,38,38,.08);color:var(--err)}
+  .k{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  .toolbar{display:flex;gap:8px;align-items:center}
+  .spacer{flex:1}
+  .sidebar{width:230px}
+  .stack{display:flex;gap:16px}
+  .stepnav .item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:#fff}
+  .stepnav .item.done{border-color:#c7f0d8;background:#f6fff9}
+  .stepnav .item.curr{border-color:#bfdbfe;background:#f0f7ff}
+  .title{font-weight:700;font-size:16px;margin:0 0 8px}
+  label{font-weight:600;font-size:13px}
+  input[type=text], input[type=number], select, textarea{
+    width:100%;border:1px solid var(--bd);border-radius:10px;padding:8px 10px;background:#fff;font:inherit
+  }
+  textarea.small{height:120px}
+  pre.log{white-space:pre-wrap;background:#0b1020;color:#d8e1ff;border-radius:12px;padding:12px;border:1px solid #1f2a44;max-height:340px;overflow:auto}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  .hint{color:var(--muted);font-size:12px}
+  .rightStat{position:absolute;right:16px;top:16px}
+  .progress{height:8px;border-radius:999px;background:#eef2ff;overflow:hidden}
+  .progress>i{display:block;height:100%;background:linear-gradient(90deg,#93c5fd,#60a5fa)}
+  .drop{border:1px dashed #cbd5e1;border-radius:12px;padding:18px;background:#fafafc;text-align:center}
+  .footer{margin:16px 0;color:#22c55e;text-align:center;font-weight:700}
+  @media (max-width:980px){ .g-2{grid-template-columns:1fr} .stack{flex-direction:column} .sidebar{width:auto} }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="v"></span>ViiR</div>
+  <nav>
+    <a href="#" id="navHome">Home</a>
+    <a href="#" id="navNew">New Task</a>
+    <a href="#" id="navTasks">Tasks</a>
+    <a href="#" id="navHelp">Help</a>
+  </nav>
+  <div class="lang chip">English ▾</div>
+</header>
+
+<div class="container" id="home">
+  <section class="hero">
+    <div class="row">
+      <div style="flex:1">
+        <h1>Welcome to ViiR</h1>
+        <div class="muted">Virus identification independent of reference sequences</div>
+        <div style="margin-top:14px">
+          <button class="btn" id="startBtn">Start New Task</button>
+        </div>
+      </div>
+      <div class="rightStat">
+        <span class="pill status pending" id="sysStat">Idle</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid g-2" style="margin-top:16px">
+    <section class="card">
+      <div class="title">Recent Tasks</div>
+      <div id="recent" class="list"></div>
+    </section>
+    <section class="card">
+      <div class="title">Shortcuts</div>
+      <div class="list">
+        <a class="chip" href="/docs">API Docs</a>
+        <a class="chip" href="/logs">Tail Logs (raw)</a>
+        <button class="btn ghost" id="gotoRun">Open Run Panel</button>
+      </div>
+    </section>
+  </div>
+  <div class="footer">@Copyright IBRC</div>
+</div>
+
+<!-- ============ Wizard / Run Panel ============ -->
+<div class="container" id="panel" style="display:none">
+  <div class="stack">
+    <aside class="sidebar">
+      <div class="card stepnav">
+        <div class="item curr"  id="s1"><span>1</span> Project Info</div>
+        <div class="item"       id="s2"><span>2</span> Data Upload</div>
+        <div class="item"       id="s3"><span>3</span> Parameters</div>
+        <div class="item"       id="s4"><span>4</span> Validate</div>
+        <div class="item"       id="s5"><span>5</span> Submit</div>
+      </div>
+    </aside>
+
+    <main style="flex:1;display:flex;flex-direction:column;gap:16px">
+
+      <!-- Step 1 -->
+      <section class="card" id="step1">
+        <div class="row"><div class="title">Project Info</div></div>
+        <div class="grid g-2">
+          <div>
+            <label>Run ID (auto)</label>
+            <input id="runId" type="text" disabled value="(after sample_list)" />
+            <div class="hint">由 N/V 批次生成：dsRNA3_vs_dsRNA4__YYYYMMDD-HHMMSS</div>
+          </div>
+          <div>
+            <label>Output Dir</label>
+            <input id="outDir" type="text" value="viir_run_1" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2 -->
+      <section class="card" id="step2">
+        <div class="row"><div class="title">Data Upload</div></div>
+        <div class="grid">
+          <div class="row" style="gap:12px">
+            <div style="flex:1">
+              <label>Batch (N)</label>
+              <input id="batchN" type="text" placeholder="e.g. dsRNA_3" />
+            </div>
+            <div style="flex:1">
+              <label>Batch (V)</label>
+              <input id="batchV" type="text" placeholder="e.g. dsRNA_4" />
+            </div>
+            <button class="btn" id="btnBuildList">Build sample_list.txt</button>
+          </div>
+
+          <div class="grid g-2">
+            <div>
+              <label>Upload FASTQ (N)</label>
+              <div class="drop">
+                <input id="fileN" type="file" multiple style="display:none" />
+                <a href="#" id="pickN">click to browse</a>
+              </div>
+              <div id="filesN" class="hint"></div>
+            </div>
+            <div>
+              <label>Upload FASTQ (V)</label>
+              <div class="drop">
+                <input id="fileV" type="file" multiple style="display:none" />
+                <a href="#" id="pickV">click to browse</a>
+              </div>
+              <div id="filesV" class="hint"></div>
+            </div>
+          </div>
+
+          <div>
+            <label>sample_list.txt (preview)</label>
+            <textarea id="samplePreview" class="small mono" readonly></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3 -->
+      <section class="card" id="step3">
+        <div class="row"><div class="title">Parameters</div></div>
+        <div class="grid g-2">
+          <div>
+            <label>P-value</label>
+            <input id="pval" type="number" step="0.0001" value="0.01" />
+          </div>
+          <div>
+            <label>Threads</label>
+            <input id="threads" type="number" value="16" />
+          </div>
+          <div>
+            <label>Max memory</label>
+            <input id="maxMem" type="text" value="64G" />
+          </div>
+          <div>
+            <label>SS-lib type</label>
+            <select id="ssType">
+              <option value="No">No</option>
+              <option value="FR">FR</option>
+              <option value="RF" selected>RF</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid g-2" style="margin-top:8px">
+          <div>
+            <label>NGS adapters (optional)</label>
+            <input id="adapterFile" type="file" />
+            <pre id="adapterPreview" class="mono" style="white-space:pre-wrap"></pre>
+          </div>
+          <div>
+            <label>Pfam ID list (optional)</label>
+            <input id="pfamFile" type="file" />
+            <pre id="pfamPreview" class="mono" style="white-space:pre-wrap"></pre>
+          </div>
+        </div>
+
+        <div style="margin-top:8px">
+          <label>config.yaml (preview)</label>
+          <textarea id="cfg" class="mono" style="height:160px"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="btn subtle" id="btnGen">Generate</button>
+            <button class="btn" id="btnSaveCfg">Save & Activate</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 4 -->
+      <section class="card" id="step4">
+        <div class="title">Validate</div>
+        <div class="grid g-2">
+          <div>
+            <label>Status</label>
+            <div class="row">
+              <span class="pill status pending" id="statusPill">idle</span>
+              <div class="spacer"></div>
+              <button class="btn ghost" id="btnResults">List results</button>
+              <select id="dlPreset">
+                <option value="lite" selected>lite</option>
+                <option value="full">full</option>
+              </select>
+              <select id="dlFormat">
+                <option>tar.gz</option>
+                <option>tar.zst</option>
+                <option>zip</option>
+                <option>tar</option>
+              </select>
+              <button class="btn" id="btnDownload">Download</button>
+            </div>
+            <div style="margin-top:8px" class="progress"><i id="prog" style="width:0%"></i></div>
+          </div>
+          <div>
+            <label>Results</label>
+            <pre id="resultsBox" class="mono" style="max-height:160px;overflow:auto"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 5 -->
+      <section class="card" id="step5">
+        <div class="row"><div class="title">Submit & Logs</div></div>
+        <div class="toolbar">
+          <button class="btn" id="btnRun">Run</button>
+          <button class="btn subtle" id="btnPollOnce">Refresh</button>
+          <label class="inline"><input type="checkbox" id="autoPoll" /> Auto refresh</label>
+          <select id="pollSec"><option>2</option><option selected>3</option><option>5</option><option>10</option></select>
+          <div class="spacer"></div>
+          <button class="btn subtle" id="btnCopyLog">Copy logs</button>
+          <button class="btn subtle" id="btnClearLog">Clear</button>
+        </div>
+        <details open style="margin-top:10px">
+          <summary class="k">Logs (compact)</summary>
+          <pre id="logsBox" class="log"></pre>
+        </details>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const state = {
+  sample_list_path: '', run_id: '', adapterPath:'', pfamPath:''
+};
+function busy(btn, yes, txtGo, txtIdle){
+  if(!btn) return;
+  btn.disabled = !!yes;
+  if(txtGo) btn.textContent = yes ? txtGo : (txtIdle||btn.dataset.idle||btn.textContent);
+}
+function pill(el, status){
+  const map = { idle:'pending', running:'inprog', finished:'completed', failed:'failed' };
+  el.className = `pill status ${map[status]||'pending'}`;
+  el.textContent = status;
+}
+function mergeLogLines(s){
+  // 合并“进度增量”类输出；保留最后一条
+  const lines = s.split(/\r?\n/);
+  const out = [];
+  const keepPrefix = [
+    /^succeeded\(\d+\)/,
+    /^\s*\[\d+M\]\s*Kmers parsed\./,
+    /^ROUND\s*=\s*\d+,/
+  ];
+  let lastKey = '';
+  for(const L of lines){
+    let k = '';
+    for(const rx of keepPrefix) if(rx.test(L)){ k = rx.toString(); break; }
+    if(k){
+      if(out.length && lastKey===k){ out[out.length-1] = L; }
+      else out.push(L);
+      lastKey = k;
+    }else{
+      out.push(L); lastKey='';
+    }
+  }
+  return out.join('\n');
+}
+
+// ====== Home & Navigation ======
+$('startBtn').onclick = () => { $('#home').style.display='none'; $('#panel').style.display='block'; };
+$('gotoRun').onclick = () => { $('#home').style.display='none'; $('#panel').style.display='block'; };
+
+async function fetchStatus(){
+  const r = await fetch('/status'); const j = await r.json();
+  pill($('sysStat'), j.status||'idle');
+  pill($('statusPill'), j.status||'idle');
+  // 极简进度估计：读 log 文件大小映射到 0–100（可再细化）
+  try{
+    if(j.status==='running'){
+      const lr = await fetch('/logs?tail=60'); const t = await lr.text();
+      const m = t.match(/(\d+\.\d+)%\s+completed/gi);
+      if(m){ const last = m[m.length-1].match(/([\d.]+)/)[1]; $('prog').style.width = Math.min(100, Number(last)) + '%'; }
+    }else if(j.status==='finished'){ $('prog').style.width = '100%'; }
+  }catch{}
+}
+
+async function fetchLogs(){
+  const r = await fetch('/logs?tail=400'); const s = await r.text();
+  $('logsBox').textContent = mergeLogLines(s);
+}
+$('btnPollOnce').onclick = ()=>{ fetchStatus(); fetchLogs(); };
+let pollTimer=null;
+$('autoPoll').onchange = e=>{
+  if(e.target.checked){
+    const sec = Number($('pollSec').value||3)*1000;
+    pollTimer = setInterval(()=>{ fetchStatus(); fetchLogs(); }, sec);
+  }else{
+    clearInterval(pollTimer);
+  }
+};
+
+// ====== Upload & sample_list ======
+function showPicked(listEl, files){
+  listEl.textContent = [...files].map(f=>f.name).join(', ');
+}
+$('pickN').onclick = (e)=>{ e.preventDefault(); $('fileN').click(); };
+$('pickV').onclick = (e)=>{ e.preventDefault(); $('fileV').click(); };
+$('fileN').onchange = e => showPicked($('filesN'), e.target.files);
+$('fileV').onchange = e => showPicked($('filesV'), e.target.files);
+
+async function uploadGroup(group, batch, inputEl, listEl){
+  if(!batch) throw new Error(`Batch (${group}) required`);
+  const files = inputEl.files;
+  if(!files || !files.length) return;
+  const fd = new FormData();
+  fd.append('group', group);
+  fd.append('batch', batch);
+  for(const f of files) fd.append('files', f);
+  const r = await fetch('/api/upload_fastq', { method:'POST', body: fd });
+  const j = await r.json();
+  if(!r.ok) throw new Error(j.detail || 'upload failed');
+  listEl.textContent = `OK → ${j.count} files → ${j.dir}`;
+}
+
+$('btnBuildList').onclick = async ()=>{
+  try{
+    busy(this,true,'Working...');
+    const nb = $('batchN').value.trim();
+    const vb = $('batchV').value.trim();
+    // 先上传（各自可选）
+    await uploadGroup('N', nb, $('fileN'), $('filesN'));
+    await uploadGroup('V', vb, $('fileV'), $('filesV'));
+    // 构建 sample_list
+    const r = await fetch('/prepare_fastq', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ N: nb, V: vb })
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.detail || 'prepare_fastq failed');
+    state.sample_list_path = j.sample_list;
+    state.run_id = j.run_id;
+    $('runId').value = j.run_id;
+
+    // 读取预览
+    const pv = await fetch('/read_file?path=' + encodeURIComponent(j.sample_list));
+    $('samplePreview').textContent = pv.ok ? (await pv.text()) : '(preview unavailable)';
+
+    // 生成初稿 config
+    genConfigPreview();
+  }catch(e){ alert(e.message); }
+  finally{ busy(this,false); }
+};
+
+// ====== adapters/pfam 预览（前 50 行）======
+async function previewText(file, box){
+  if(!file) { box.textContent = ''; return; }
+  const t = await file.text();
+  const lines = t.split(/\r?\n/).slice(0,50).join('\n');
+  box.textContent = lines + (t.split(/\r?\n/).length>50 ? '\n…' : '');
+}
+$('adapterFile').onchange = e => previewText(e.target.files[0], $('adapterPreview'));
+$('pfamFile').onchange = e => previewText(e.target.files[0], $('pfamPreview'));
+
+// ====== config 生成/保存 ======
+function q(x){ return x? String(x) : ''; }
+function genConfigPreview(){
+  const out = $('outDir').value.trim() || 'viir_run_1';
+  const yml = [
+    `out: /workspace/${out}`,
+    `fastq-list: ${q(state.sample_list_path)}`,
+    `threads: ${Number($('threads').value||16)}`,
+    `adapter: ${q(state.adapterPath)}`,
+    `pfam: ${q(state.pfamPath)}`,
+    `hmm-folder: /opt/viir/resources/hmm_models`,
+    `SS-lib-type: ${$('ssType').value}`,
+    `blastndb: /opt/viir/resources/ViiR_DB`,
+    `pvalue: ${Number($('pval').value||0.01)}`,
+    `max-memory: ${q($('maxMem').value||'64G')}`
+  ].join('\n');
+  $('cfg').value = yml;
+}
+$('btnGen').onclick = genConfigPreview;
+
+$('btnSaveCfg').onclick = async ()=>{
+  try{
+    busy(this,true,'Saving...');
+    genConfigPreview();
+    const yml = $('cfg').value;
+    const suffix = state.run_id || Date.now().toString();
+    const fd = { yml, suffix, activate:true };
+    const r = await fetch('/save_config', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(fd) });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.detail || 'save_config failed');
+    alert('Config saved: ' + j.path);
+  }catch(e){ alert(e.message); }
+  finally{ busy(this,false); }
+};
+
+// ====== Run & monitor ======
+$('btnRun').onclick = async ()=>{
+  try{
+    busy(this,true,'Running...');
+    const r = await fetch('/run_active', { method:'POST' });
+    const j = await r.json(); if(!r.ok) throw new Error(j.detail || 'run_active failed');
+    pill($('statusPill'),'running'); $('autoPoll').checked=true; $('autoPoll').dispatchEvent(new Event('change'));
+  }catch(e){ alert(e.message); }
+  finally{ busy(this,false); }
+};
+
+$('btnClearLog').onclick = ()=>{ $('logsBox').textContent=''; };
+$('btnCopyLog').onclick  = ()=>{ navigator.clipboard.writeText($('logsBox').textContent); };
+
+$('btnResults').onclick = async ()=>{
+  const r = await fetch('/results'); const j = await r.json();
+  $('resultsBox').textContent = j.map(o=>`${o.path}  [${o.size}]`).join('\n');
+};
+
+$('btnDownload').onclick = ()=>{
+  const preset = $('dlPreset').value; const fmt = $('dlFormat').value;
+  window.location.href = `/download2?preset=${encodeURIComponent(preset)}&format=${encodeURIComponent(fmt)}&strategy=file`;
+};
+
+// ====== init ======
+fetchStatus();  // 首页右上角系统态
+// 最近任务：用 configs 名称粗略生成
+(async ()=>{
+  try{
+    const r = await fetch('/list_runs'); // 如果没有该接口，就简单占位
+    if(r.ok){
+      const j = await r.json();
+      $('recent').innerHTML = j.slice(0,6).map(x=>{
+        const st = x.status || 'pending';
+        const cls = st==='finished'?'completed':(st==='running'?'inprog':(st==='failed'?'failed':'pending'));
+        return `<div class="row" style="justify-content:space-between;border:1px solid var(--bd);border-radius:12px;padding:10px 12px;background:#fff">
+          <span class="k">${x.run}</span>
+          <span class="pill status ${cls}">${st}</span>
+        </div>`;
+      }).join('');
+    }else{
+      $('recent').innerHTML = `<div class="hint">No recent list endpoint; will show after first run.</div>`;
+    }
+  }catch{ $('recent').innerHTML = `<div class="hint">Recent unavailable.</div>`; }
+})();
+</script>
+</body>
+</html>

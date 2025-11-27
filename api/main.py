@@ -8,6 +8,8 @@ import subprocess
 import threading
 import logging
 import re
+import psutil
+import signal
 from contextlib import contextmanager
 from pathlib import Path, PurePath
 from typing import Optional, Dict, Literal, List
@@ -16,6 +18,7 @@ from tempfile import NamedTemporaryFile
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query,BackgroundTasks, Request, Body
 from fastapi.responses import PlainTextResponse, FileResponse, JSONResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel, field_validator, Field  
+# from .settings import DATA_ROOT, PIPELINE_SH, DEFAULT_ARGS
 from starlette.background import BackgroundTask
 from fastapi.staticfiles import StaticFiles
 
@@ -31,7 +34,7 @@ app = FastAPI(
 ROOT = Path("/workspace").resolve()
 # WORKSPACE = Path(os.environ.get("WORKSPACE", "/workspace"))
 WORKSPACE = ROOT
-LOG_FILE = WORKSPACE / "run_viir.log"
+LOG_FILE = WORKSPACE / "web_run_viir.log"
 
 VIIR_BIN = os.environ.get("VIIR_BIN", "/usr/local/bin/viir")
 MAMBA = os.environ.get("MAMBA_BIN", "/usr/local/bin/micromamba")
@@ -69,6 +72,9 @@ log = logging.getLogger("uvicorn")
 log.setLevel(logging.INFO)
 
 # 计算静态目录的绝对路径：
+# __file__ = /workspace/api/main.py
+# BASE_DIR  = /workspace/api
+# STATIC_DIR= /workspace/app/static
 BASE_DIR   = Path(__file__).resolve().parent
 STATIC_DIR = (BASE_DIR.parent / "app" / "static").resolve()
 
@@ -246,6 +252,28 @@ def create_staging_tree(out_dir: Path, files: list[Path]) -> Path:
     return staging
 
 
+# @contextmanager
+# def build_staging_tree(out_path: Path, files: list[Path]):
+#     """
+#     为 lite 模式构建临时“只包含所需文件”的树：
+#     - 同盘则硬链接（极快 & 几乎不占空间）
+#     - 跨盘则拷贝
+#     退出自动清理。
+#     """
+#     staging = Path(tempfile.mkdtemp(prefix="viir_lite_"))
+#     try:
+#         for src in files:
+#             rel = safe_rel_to(src, out_path)
+#             dst = staging / rel
+#             dst.parent.mkdir(parents=True, exist_ok=True)
+#             try:
+#                 os.link(src, dst)  # 硬链接
+#             except OSError:
+#                 shutil.copy2(src, dst)  # 退化为拷贝
+#         yield staging
+#     finally:
+#         shutil.rmtree(staging, ignore_errors=True)
+
 def tar_name_and_media(fmt: str, base_name: str, lite: bool) -> tuple[list[str], str, str]:
     """
     返回：['tar', ...] 命令参数片段（不含 -C 和 '.'）、下载文件名、媒体类型。
@@ -405,7 +433,8 @@ def run_viir(extra_params: list[str]):
                 cmd_list,
                 stdout=lf,
                 stderr=subprocess.STDOUT,
-                cwd=WORKSPACE
+                cwd=WORKSPACE,
+                preexec_fn=os.setsid     # ★ 这句非常关键！
             )
         JOB["pid"] = proc.pid
         log.info(f"[RUN] pid={proc.pid}")
@@ -731,6 +760,28 @@ async def get_file_content(filename: str):
         raise HTTPException(status_code=500, detail=f"Error reading file: {e}")
 
 
+# 最近任务（扫描 /workspace/configs & 输出）
+@app.get("/list_runs")
+def list_runs():
+    items=[]
+    for p in sorted((CONFIG_DIR).glob("config__*.yaml"), reverse=True)[:20]:
+        run = p.stem.replace("config__","")
+        out = infer_out_dir(CONFIG_PATH, WORKSPACE)  # 或者按 run 拼出 out，随你
+        # st = JOB["status"] if JOB.get("cmd","").endswith(run) else "pending"
+        cmd = JOB.get("cmd") or ""
+        st = JOB["status"] if cmd.endswith(run) else "pending"
+        items.append({"run":run,"status":st})
+    return items
+
+# 枚举批次目录
+@app.get("/list_batches")
+def list_batches():
+    root = ROOT/"NGS_data"
+    out={}
+    for g in ["N","V"]:
+        d = root/g
+        out[g] = [p.name for p in d.iterdir() if p.is_dir()] if d.exists() else []
+    return out
 
 
 
@@ -828,6 +879,12 @@ def logs(tail: int = 300, compact: bool = Query(True), max_bytes: int = 65536*4)
         text = data.decode("utf-8", "ignore")
         if compact:
             # 逐行清理：保留每行中最后一次 \r 之后的内容
+            # cleaned = []
+            # for ln in text.splitlines():
+            #     if "\r" in ln:
+            #         ln = ln.split("\r")[-1]
+            #     cleaned.append(ln)
+            # text = "\n".join(cleaned[-tail:])
             text = "\n".join(compress_log_lines(text.splitlines())[-tail*10:])
         else:
             # 维持原逻辑（按行尾）
@@ -855,13 +912,67 @@ def results():
         "90_blastn/blastn_result.tsv",
         "run_viir.log"
     ]
-    out = [{"path": "run_viir.log", "size": LOG_FILE.stat().st_size, "mtime": LOG_FILE.stat().st_mtime}] if LOG_FILE.exists() else []
+    out = [{"path": "web_run_viir.log", "size": LOG_FILE.stat().st_size, "mtime": LOG_FILE.stat().st_mtime}] if LOG_FILE.exists() else []
     for rel in wanted:
         p = out_path / rel
         if p.exists():
             s = p.stat()
             out.append({"path": str(p), "size": s.st_size, "mtime": s.st_mtime})
     return out
+
+
+@app.post("/stop")
+def stop_pipeline():
+    pid = JOB.get("pid")
+    if not pid:
+        return {"status": "no-process"}
+
+    try:
+        # os.kill(pid, 9)  # 强制终止
+        pgid = os.getpgid(pid)
+        os.killpg(pgid, signal.SIGKILL)
+        JOB["status"] = "failed"
+        JOB["finished_at"] = time.time()
+        JOB["returncode"] = -9
+        return {"status": "stopped"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/usage")
+def usage():
+    cpu = psutil.cpu_percent()
+    mem = psutil.virtual_memory().percent
+
+    if JOB["started_at"]:
+        runtime = time.time() - JOB["started_at"]
+    else:
+        runtime = 0
+
+    return {
+        "cpu": cpu,
+        "mem": mem,
+        "runtime": runtime
+    }
+
+
+# 下载结果路由
+# @app.get("/download")
+# def download():
+#     cfg = read_config()  
+#     out_path = infer_out_dir(CONFIG_PATH, WORKSPACE)
+#     if not out_path.exists():
+#         return JSONResponse({"error": "[download func] out dir not found"}, status_code=404)
+
+#     run_id = infer_run_id_from_cfg(cfg)
+#     zipname = f"viir_results__{run_id}.zip"
+#     tmpzip = Path(tempfile.gettempdir()) / zipname
+#     if tmpzip.exists(): tmpzip.unlink()
+#     with zipfile.ZipFile(tmpzip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+#         for p in out_path.rglob("*"):
+#             if p.is_file():
+#                 zf.write(p, p.relative_to(out_path))
+#     return FileResponse(tmpzip, filename=zipname, media_type="application/zip")
 
 
 def _add_file_header(path: Path, filename: str) -> dict:
@@ -919,7 +1030,7 @@ def download2(preset: str = "lite", format: str = "tar.gz"):
         
         # ✅ 新：把清理动作交给 BackgroundTask（传输完成后执行）
         bg = BackgroundTask(shutil.rmtree, base_dir, True) if staging_path else None
-        return StreamingResponse(stream_cmd(cmd), filename=filename, media_type=media, headers=headers, background=bg)
+        return StreamingResponse(stream_cmd(cmd), media_type=media, headers=headers, background=bg)
 
     # zip：必须落地，再清理 zip（以及 staging）
     zip_path = zip_to_tmp(base_dir, base, is_lite)

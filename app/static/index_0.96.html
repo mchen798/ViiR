@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Web-ViiR</title>
+
+  <!-- 样式 -->
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/wizard.css">
+</head>
+
+<body>
+
+<!-- ======================= -->
+<!-- Header：导航栏 -->
+<!-- ======================= -->
+<header class="app-header">
+  <div class="left">
+    <img src="/static/assets/logo-rmbg.png" class="logo">
+    <!-- <span class="title">Web-ViiR</span> -->
+  </div> 
+
+  <nav class="nav">
+    <button class="nav-btn" data-target="home">Home</button>
+    <button class="nav-btn" data-target="wizard">New Task</button>
+    <button class="nav-btn" data-target="run">Run Panel</button>
+    <a class="nav-btn" href="/docs" target="_blank">API Docs</a>
+  </nav>
+
+  <div class="right">
+    <span id="pillHealth" class="pill status pending">checking...</span>
+    <span id="pillStatus" class="pill status pending">idle</span>
+  </div>
+</header>
+
+
+<main>
+
+<!-- ======================= -->
+<!-- Page 1: HOME -->
+<!-- ======================= -->
+<section id="page-home" class="page active">
+  <h2>Recent Tasks</h2>
+
+  <div id="recent" class="cards">
+    <div class="hint">Loading...</div>
+  </div>
+</section>
+
+
+<!-- ======================= -->
+<!-- Page 2: WIZARD -->
+<!-- ======================= -->
+<section id="page-wizard" class="page">
+
+  <!-- Step 1: Upload -->
+  <div class="wizard-step">
+    <h2>Step 1 — Upload FASTQ</h2>
+
+    <div class="row">
+      <input id="batchN" placeholder="Batch N name (optional)">
+      <button id="pickN" class="btn">Pick N FASTQ</button>
+      <input type="file" id="fileN" style="display:none" multiple>
+      <div id="filesN" class="small"></div>
+    </div>
+
+    <div class="row">
+      <input id="batchV" placeholder="Batch V name (optional)">
+      <button id="pickV" class="btn">Pick V FASTQ</button>
+      <input type="file" id="fileV" style="display:none" multiple>
+      <div id="filesV" class="small"></div>
+    </div>
+
+    <button id="btnBuildList" class="btn btn-primary">Build sample_list</button>
+
+    <pre id="samplePreview" class="preview"></pre>
+
+    <div class="row">
+      <label>run_id:</label>
+      <input id="runId" readonly>
+    </div>
+  </div>
+
+  <!-- Step 2: Config -->
+  <div class="wizard-step">
+    <h2>Step 2 — Configuration</h2>
+
+    <div class="row">
+      <label>Threads:</label>
+      <input id="threads" value="16">
+    </div>
+
+    <div class="row">
+      <label>P-value:</label>
+      <input id="pval" value="0.01">
+    </div>
+
+    <div class="row">
+      <label>Output dir:</label>
+      <input id="outDir" value="viir_run_1">
+    </div>
+
+    <div class="row">
+      <label>SS-lib-type:</label>
+      <input id="ssType" value="none">
+    </div>
+
+    <div class="row">
+      <label>Max Memory:</label>
+      <input id="maxMem" value="64G">
+    </div>
+
+    <button id="btnGen" class="btn">Generate Config</button>
+
+    <textarea id="cfg" class="config-box"></textarea>
+
+    <button id="btnSaveCfg" class="btn btn-primary">Save Config</button>
+  </div>
+
+  <!-- Step 3: Run -->
+  <div class="wizard-step">
+    <h2>Step 3 — Run</h2>
+    <button id="btnRun" class="btn btn-primary">Run ViiR</button>
+  </div>
+
+</section>
+
+
+
+<!-- ======================= -->
+<!-- Page 3: RUN PANEL -->
+<!-- ======================= -->
+<section id="page-run" class="page">
+
+  <h2>Run & Monitor</h2>
+
+  <div class="progress-bar">
+    <div id="prog" class="progress"></div>
+  </div>
+
+  <div class="row">
+    <button id="btnPollOnce" class="btn">Refresh</button>
+    <label><input type="checkbox" id="autoPoll"> Auto refresh</label>
+  </div>
+
+  <pre id="logsBox" class="log-box">(logs appear here)</pre>
+
+  <div class="row">
+    <button id="btnClearLog" class="btn">Clear</button>
+    <button id="btnCopyLog" class="btn">Copy</button>
+  </div>
+
+  <h3>Results</h3>
+  <button id="btnResults" class="btn">Show Results</button>
+  <pre id="resultsBox" class="preview"></pre>
+
+  <h3>Download</h3>
+  <div class="row">
+    <select id="dlPreset">
+      <option value="lite">lite</option>
+      <option value="full">full</option>
+    </select>
+    <select id="dlFormat">
+      <option value="tar.gz">tar.gz</option>
+      <option value="tar.zst">tar.zst</option>
+      <option value="tar">tar</option>
+      <option value="zip">zip</option>
+    </select>
+    <button id="btnDownload" class="btn btn-primary">Download</button>
+  </div>
+</section>
+
+</main>
+
+
+<!-- ======================= -->
+<!-- JS Modules -->
+<!-- ======================= -->
+<script type="module" src="/static/js/app.js"></script>
+
+</body>
+</html>

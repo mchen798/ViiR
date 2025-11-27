@@ -101,10 +101,20 @@ fi
 
 # BLAST DB：支持 "Default_db" 占位符或用户路径；我们使用“目录或前缀”都可。
 # 约定：如果是 Default_db，则使用内置小库（或你自带的目录结构）
+# case "$BLASTNDB_RAW" in
+#   ""|"Default_db") BLASTNDB_FASTA="$VIIR_RESOURCES/ViiR_DB" ;;
+#   *) BLASTNDB_FASTA="$(resolve_rel_to_config "$BLASTNDB_RAW")" ;;
+# esac
 case "$BLASTNDB_RAW" in
-  ""|"Default_db") BLASTNDB_FASTA="$VIIR_RESOURCES/ViiR_DB" ;;
-  *) BLASTNDB_FASTA="$(resolve_rel_to_config "$BLASTNDB_RAW")" ;;
+  ""|"Default_db"|"$VIIR_RESOURCES/ViiR_DB")
+    BLASTNDB_RAW="Default_db"
+    BLASTNDB_FASTA="$VIIR_RESOURCES/ViiR_DB"
+    ;;
+  *)
+    BLASTNDB_FASTA="$(resolve_rel_to_config "$BLASTNDB_RAW")"
+    ;;
 esac
+
 
 # =================== 2. Logging Setup =============================
 # Prepare logging to both console and a log file

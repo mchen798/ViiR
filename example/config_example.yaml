@@ -14,8 +14,8 @@ adapter: Default_adapter
 
 # Pfam ID list file, or "Default_list" to auto-download         
 pfam: Default_list      
-hmm-folder: ../hmm_models
 
+hmm-folder: /opt/viir/resources/hmm_models
 
 # Strand-specific library type: No, FR, or RF               
 SS-lib-type: RF             
