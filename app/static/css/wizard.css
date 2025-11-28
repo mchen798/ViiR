@@ -85,6 +85,59 @@
   display: block;
 }
 
+.wizard-panel#wizard-step1 .row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#wizard-step1 .mode-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 12px;
+}
+
+#wizard-step1 #filesN,
+#wizard-step1 #filesV {
+  white-space: normal;
+  word-break: break-word;
+  padding: 6px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  min-height: 32px;
+}
+
+.wizard-panel#wizard-step1 #runId {
+  min-width: 240px;
+}
+
+.upload-row input {
+  min-width: 220px;
+}
+
+.filename-box {
+  background: #fafafa;
+}
+
+.group-block,
+.action-block,
+.runid-block {
+  margin: 10px 0;
+}
+
+.helper {
+  color: #666;
+  font-size: 12px;
+}
+
+.status-text {
+  color: #555;
+}
+
+.existing-row {
+  align-items: center;
+  gap: 8px;
+}
+
 .form-row {
   display: flex;
   align-items: center;

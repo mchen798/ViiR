@@ -8,7 +8,9 @@ export const state = {
   run_id: "",
   reviewConfirmed: false,
   adapterPath: "/opt/viir/resources/adapters.fasta",
-  pfamPath: "/opt/viir/resources/Pfam_IDs_list.txt"
+  pfamPath: "/opt/viir/resources/Pfam_IDs_list.txt",
+  uploading: false,
+  uploadDone: false
 };
 
 export function resetReviewConfirmation() {

@@ -2,14 +2,16 @@
 // config.js
 // 负责：config.yaml 的生成、编辑、保存
 // =====================================
-
-import { UI } from './ui.js';
-import { API } from './api.js';
-import { state, resetReviewConfirmation } from './state.js';
-import { updateRunButtonState } from './runner.js';
-import { Wizard } from './wizard.js';
+// const VERSION = '20251128';
+import { UI } from '/static/js/ui.js?v=20251128';
+import { API } from '/static/js/api.js?v=20251128';
+import { state, resetReviewConfirmation } from '/static/js/state.js?v=20251128';
+import { updateRunButtonState } from '/static/js/runner.js?v=20251128';
+import { Wizard } from '/static/js/wizard.js?v=20251128';
+import { Review } from '/static/js/review.js?v=20251128';
 
 export const Config = {
+  templateBase: "",
 
   // 初始化（app.js 中调用）
   init() {
@@ -26,6 +28,9 @@ export const Config = {
     UI.bindClick("btnSaveCfg", async () => {
       await Config.save();
       updateRunButtonState();
+    });
+    UI.bindClick("btnNextStep3", () => {
+      Config.goToReview();
     });
 
     // 监控输入变化
@@ -53,9 +58,10 @@ export const Config = {
     UI.setVal('adapterPath', state.adapterPath);
     UI.setVal('pfamPath', state.pfamPath);
 
-    UI.bindClick('toggleAdapter', () => Config.toggleViewer('viewAdapter', '/workspace/adapter.h'));
-    UI.bindClick('togglePfam', () => Config.toggleViewer('viewPfam', '/workspace/pfam_list.txt'));
+    UI.bindClick('toggleAdapter', () => Config.toggleViewer('viewAdapter', '/opt/viir/resources/adapters.fasta'));
+    UI.bindClick('togglePfam', () => Config.toggleViewer('viewPfam', '/opt/viir/resources/Pfam_IDs_list.txt'));
     Config.validateRequired();
+    Config._applyOutPrefix(true);
   },
 
   // ===============================
@@ -67,6 +73,7 @@ export const Config = {
     if (up.run_id) {
       UI.setVal('runId', up.run_id);
     }
+    Config._applyOutPrefix(true);
 
     // 自动重新生成 YAML 预览
     const yml = this.generate();
@@ -79,10 +86,12 @@ export const Config = {
   // 从页面读取所有参数
   // ===============================
   _readInputs() {
+    // 确保输出目录有默认前缀
+    Config._applyOutPrefix(false);
     return {
       threads: Number(UI.val('threads') || 16),
       pvalue: Number(UI.val('pval') || 0.01),
-      out: UI.val('outDir').trim() || 'viir_run_' + (state.run_id || '1'),
+      out: UI.val('outDir').trim() || Config._buildOutPrefix(),
       ssType: UI.val('ssType'),
       maxMemory: UI.val('maxMem') || '64G'
     };
@@ -114,7 +123,7 @@ export const Config = {
     UI.setVal('pfamPath', state.pfamPath);
 
     const yaml = [
-      `out: /workspace/${p.out}`,
+      `out: ${p.out}`,
       `fastq-list: ${st.sample_list_path}`,
       `threads: ${p.threads}`,
       `adapter: ${state.adapterPath}`,
@@ -126,7 +135,7 @@ export const Config = {
       `max-memory: ${p.maxMemory}`
     ].join("\n");
 
-    const pretty = yaml.split("\n").map(l => l ? `  ${l}` : l).join("\n");
+    const pretty = yaml;
 
     const cfgArea = UI.el('cfg');
     if (cfgArea) {
@@ -135,6 +144,7 @@ export const Config = {
       UI.setText('cfg', pretty);
     }
     Config.validateRequired();
+    Config._toggleNext(false);
     return pretty;
   },
 
@@ -146,6 +156,7 @@ export const Config = {
     resetReviewConfirmation();
     Config.validateRequired();
     updateRunButtonState();
+    Config._toggleNext(false);
   },
 
 
@@ -162,16 +173,17 @@ export const Config = {
       if (!yml) {
         throw new Error("Config content is empty");
       }
-      const suffix = state.run_id || Date.now().toString();
+      const suffix = Config._buildSuffix();
 
       const result = await API.saveConfig(yml, suffix, true);
 
       UI.toast(`Config saved: ${result.path}`, "success");
       Wizard.markDone(2);
       Wizard.enable(3);
-      Wizard.setDone(3, false);
-      Wizard.setActive(3);
       Wizard.disableFrom(4);
+      Config._toggleNext(true);
+      Review.refresh();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       resetReviewConfirmation();
       updateRunButtonState();
       if (cfgArea) {
@@ -205,18 +217,70 @@ export const Config = {
   async toggleViewer(preId, path) {
     const pre = UI.el(preId);
     if (!pre) return;
-    const showing = pre.style.display !== 'none';
+    const showing = pre.style.display !== 'none' && pre.style.display !== '';
     if (showing) {
       pre.style.display = 'none';
       return;
     }
     pre.textContent = "Loading...";
     pre.style.display = 'block';
+    pre.scrollTop = 0;
     try {
       const txt = await API.readFile(path);
       pre.textContent = txt.slice(0, 10000) + (txt.length > 10000 ? "\n..." : "");
     } catch (err) {
       pre.textContent = `⚠️ Unable to load ${path}: ${err.message}`;
+    }
+  },
+
+  goToReview() {
+    Wizard.markDone(2);
+    Wizard.enable(3);
+    Wizard.setActive(3);
+    Wizard.disableFrom(4);
+    Config._toggleNext(false);
+    Review.refresh();
+  },
+
+  _toggleNext(show) {
+    UI.toggle('btnNextStep3', !!show);
+  },
+
+  _buildSuffix() {
+    const ts = new Date();
+    const y = ts.getFullYear();
+    const m = String(ts.getMonth() + 1).padStart(2, '0');
+    const d = String(ts.getDate()).padStart(2, '0');
+    const hh = String(ts.getHours()).padStart(2, '0');
+    const mm = String(ts.getMinutes()).padStart(2, '0');
+    const ss = String(ts.getSeconds()).padStart(2, '0');
+    // const stamp = `${y}${m}${d}-${hh}${mm}${ss}`;
+    const stamp = `${y}${m}${d}-${hh}${mm}`;
+
+    const baseInput = this.templateBase || UI.val('runId').trim() || state.run_id || 'config';
+    const base = Config._sanitize(baseInput) || "config";
+    return `${base}_${stamp}`;
+  },
+
+  _sanitize(name) {
+    return (name || "").replace(/[^A-Za-z0-9_-]+/g, "_").slice(0, 80);
+  },
+
+  _buildOutPrefix() {
+    const ts = new Date();
+    const y = ts.getFullYear();
+    const m = String(ts.getMonth() + 1).padStart(2, '0');
+    const d = String(ts.getDate()).padStart(2, '0');
+    const hh = String(ts.getHours()).padStart(2, '0');
+    const mm = String(ts.getMinutes()).padStart(2, '0');
+    return `viir_run_${y}${m}${d}-${hh}${mm}`;
+  },
+
+  _applyOutPrefix(force) {
+    const current = UI.val('outDir').trim();
+    if (!current || force) {
+      const prefix = Config._buildOutPrefix();
+      UI.setVal('outDir', prefix);
     }
   }
 };

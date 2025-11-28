@@ -3,15 +3,16 @@
 // 整个 Web-ViiR 应用的入口模块
 // =====================================
 
-import { Nav } from './navigation.js';
-import { Uploader } from './uploader.js';
-import { Config } from './config.js';
-import { Runner, updateRunButtonState } from './runner.js';
-import { API } from './api.js';
-import { UI } from './ui.js';
-import { Review } from './review.js';
-import { Wizard } from './wizard.js';
+const VERSION = '20251128';
 
+import { Nav } from '/static/js/navigation.js?v=20251128';
+import { Uploader } from '/static/js/uploader.js?v=20251128';
+import { Config } from '/static/js/config.js?v=20251128';
+import { Runner, updateRunButtonState } from '/static/js/runner.js?v=20251128';
+import { API } from '/static/js/api.js?v=20251128';
+import { UI } from '/static/js/ui.js?v=20251128';
+import { Review } from '/static/js/review.js?v=20251128';
+import { Wizard } from '/static/js/wizard.js?v=20251128';
 
 export const App = {
 
@@ -128,3 +129,7 @@ App.initWizardSteps = function() {
 window.addEventListener('DOMContentLoaded', () => {
   App.init();
 });
+
+// 便于控制台调试（不额外触发 init）
+window.App = App;
+window.APP_VERSION = VERSION;

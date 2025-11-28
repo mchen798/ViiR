@@ -2,10 +2,11 @@
 // runner.js
 // 负责：任务运行、状态监控、日志刷新、下载、结果列表
 // =====================================
-import { state } from './state.js';
 
-import { API } from './api.js';
-import { UI } from './ui.js';
+// const VERSION = '20251128';
+import { state } from './state.js?v=20251128';
+import { API } from './api.js?v=20251128';
+import { UI } from './ui.js?v=20251128';
 
 
 

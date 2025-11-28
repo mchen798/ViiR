@@ -783,6 +783,15 @@ def list_batches():
         out[g] = [p.name for p in d.iterdir() if p.is_dir()] if d.exists() else []
     return out
 
+@app.get("/list_sample_lists")
+def list_sample_lists():
+    items=[]
+    if SAMPLE_LIST_DIR.exists():
+        for p in sorted(SAMPLE_LIST_DIR.glob("sample_list__*.txt")):
+            run = p.stem.replace("sample_list__","")
+            items.append({"run_id": run, "sample_list_path": str(p)})
+    return items
+
 
 
 

@@ -5,8 +5,8 @@
   <title>Web-ViiR</title>
 
   <!-- 样式 -->
-  <link rel="stylesheet" href="/static/css/base.css">
-  <link rel="stylesheet" href="/static/css/wizard.css">
+  <link rel="stylesheet" href="/static/css/base.css?v=20251128">
+  <link rel="stylesheet" href="/static/css/wizard.css?v=20251128">
 </head>
 
 <body>
@@ -80,28 +80,76 @@
 
         <div class="card">
           <h2>Step 1 — Upload FASTQ</h2>
-          <!-- Upload UI remains same -->
-          <div class="row">
-            <input id="batchN" placeholder="Batch N (optional)">
-            <button id="pickN" class="btn">Pick N FASTQ</button>
-            <input type="file" id="fileN" multiple style="display:none">
+          <div class="mode-row">
+            <label><input type="radio" name="datasetMode" value="new" checked> New dataset (upload & split)</label>
+            <label><input type="radio" name="datasetMode" value="existing"> Use existing dataset</label>
           </div>
-          <div id="filesN" class="small"></div>
 
-          <div class="row">
-            <input id="batchV" placeholder="Batch V (optional)">
-            <button id="pickV" class="btn">Pick V FASTQ</button>
-            <input type="file" id="fileV" multiple style="display:none">
+          <div id="panel-new-dataset">
+            <div class="group-block">
+              <div class="row upload-row">
+                <button id="pickN" class="btn">Pick N FASTQ</button>
+                <input type="file" id="fileN" multiple style="display:none">
+                <button id="uploadN" class="btn btn-primary">Upload N</button>
+                <input id="batchN" placeholder="Batch N label (optional)">
+              </div>
+              <div class="helper">Select and upload control group FASTQ files.</div>
+              <div id="filesN" class="small filename-box"></div>
+              <div id="statusN" class="small status-text">N group upload: not started</div>
+            </div>
+
+            <div class="group-block">
+              <div class="row upload-row">
+                <button id="pickV" class="btn">Pick V FASTQ</button>
+                <input type="file" id="fileV" multiple style="display:none">
+                <button id="uploadV" class="btn btn-primary">Upload V</button>
+                <input id="batchV" placeholder="Batch V label (optional)">
+              </div>
+              <div class="helper">Select and upload treatment/virus group FASTQ files.</div>
+              <div id="filesV" class="small filename-box"></div>
+              <div id="statusV" class="small status-text">V group upload: not started</div>
+            </div>
+
+            <div class="progress-bar" id="uploadProgBar" style="display:none;">
+              <div id="uploadProg" class="progress"></div>
+            </div>
+            <div id="uploadProgText" class="small"></div>
+
+            <div class="runid-block">
+              <label>run_id:</label>
+              <input id="runId" placeholder="Enter task name for viir_run_<run_id>">
+              <div class="help-text">Used to name your output folder (viir_run_<run_id>). Leave empty to auto-generate.</div>
+            </div>
+
+            <div class="action-block">
+              <button id="btnBuildList" class="btn btn-primary" disabled>Build sample_list</button>
+              <div class="helper">Split uploaded FASTQ into N/V groups and create sample_list.txt.</div>
+              <div id="prepareStatus" class="small status-text"></div>
+              <div class="progress-bar" id="prepareProgBar" style="display:none;">
+                <div class="progress" style="width:100%;"></div>
+              </div>
+              <div id="prepareUsage" class="small"></div>
+            </div>
           </div>
-          <div id="filesV" class="small"></div>
 
-          <button id="btnBuildList" class="btn btn-primary">Build sample_list</button>
+          <div id="panel-existing-dataset" style="display:none;">
+            <div class="helper">Reuse an existing dataset without uploading.</div>
+            <div class="row existing-row">
+              <label for="existingRunSelect">Choose dataset:</label>
+              <select id="existingRunSelect"></select>
+              <button id="btnLoadExisting" class="btn btn-primary">Load dataset</button>
+            </div>
+            <div id="existingStatus" class="small status-text"></div>
+          </div>
 
-          <pre id="samplePreview" class="preview"></pre>
+          <div class="action-block">
+            <button id="toggleSamplePreview" class="btn btn-subtle">Show sample list preview</button>
+            <pre id="samplePreview" class="preview" style="display:none;"></pre>
+          </div>
 
-          <div class="row">
-            <label>run_id:</label>
-            <input id="runId" readonly>
+          <div class="action-block">
+            <button id="btnGoConfig" class="btn btn-primary" disabled>Go to Configuration</button>
+            <div class="helper">Use current sample_list and run_id to configure ViiR.</div>
           </div>
         </div>
       </div>
@@ -174,7 +222,10 @@
 
             <textarea id="cfg" class="cfg-box"></textarea>
 
-            <button id="btnSaveCfg" class="btn btn-primary">Save Config</button>
+            <div class="row" style="gap:8px; align-items:center; flex-wrap:wrap;">
+              <button id="btnSaveCfg" class="btn btn-primary">Save Config</button>
+              <button id="btnNextStep3" class="btn btn-primary" style="display:none;">Next → Step 3</button>
+            </div>
 
             <div class="card" style="margin-top:12px;">
               <div class="row" style="justify-content: space-between; align-items:center;">
@@ -344,7 +395,8 @@
 <!-- ======================= -->
 <!-- JS Modules -->
 <!-- ======================= -->
-<script type="module" src="/static/js/app.js"></script>
+<script type="module" src="/static/js/app.js?v=20251128"></script>
+
 
 </body>
 </html>

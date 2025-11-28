@@ -1,8 +1,12 @@
-import { UI } from './ui.js';
-import { API } from './api.js';
-import { state } from './state.js';
-import { updateRunButtonState } from './runner.js';
-import { Wizard } from './wizard.js';
+
+
+
+// const VERSION = '20251128';
+import { UI } from './ui.js?v=20251128';
+import { API } from './api.js?v=20251128';
+import { state } from './state.js?v=20251128';
+import { updateRunButtonState } from './runner.js?v=20251128';
+import { Wizard } from './wizard.js?v=20251128';
 
 export const Review = {
 
