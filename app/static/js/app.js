@@ -26,6 +26,8 @@ export const App = {
     Config.init();
     Runner.init();
     Review.init();
+    UI.bindClick('btnStart', () => Nav.go('wizard'));
+    UI.bindClick('btnGoRunPanel', () => Nav.go('run'));
 
     // 3) 检查系统健康状态
     await App.updateHealthStatus();

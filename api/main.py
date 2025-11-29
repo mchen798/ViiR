@@ -34,7 +34,7 @@ app = FastAPI(
 ROOT = Path("/workspace").resolve()
 # WORKSPACE = Path(os.environ.get("WORKSPACE", "/workspace"))
 WORKSPACE = ROOT
-LOG_FILE = WORKSPACE / "web_run_viir.log"
+LOG_FILE = WORKSPACE / "pipeline_run_viir.log"
 
 VIIR_BIN = os.environ.get("VIIR_BIN", "/usr/local/bin/viir")
 MAMBA = os.environ.get("MAMBA_BIN", "/usr/local/bin/micromamba")
@@ -503,18 +503,100 @@ def split_run(cmd: list[str], cwd: Path | None = None):
         raise HTTPException(status_code=500, detail=f"Command failed: {' '.join(cmd)}\n{proc.stdout[:4000]}")
     return proc.stdout
 
+# def _find_first_match(folder: Path, patterns: list[str]) -> Path | None:
+#     for pat in patterns:
+#         hit = next(sorted(folder.glob(pat)), None)
+#         if hit:
+#             return hit
+#     return None
+def _find_first_match(folder: Path, patterns: list[str]) -> Path | None:
+    for pat in patterns:
+        for hit in folder.glob(pat):
+            return hit
+    return None
+
+
+
+
+def collect_split_pairs(out_dir: Path, parts: int) -> list[tuple[Path, Path]]:
+    """
+    Gather already-split R1/R2 pairs from out_dir without re-running split2.
+    Supports filenames like:
+      *_1.part_001.fastq.gz
+      *_R1_*.part_001.fastq.gz
+      *.1.part_001.fastq.gz
+      (and fq.gz variants)
+    """
+    pairs: list[tuple[Path, Path]] = []
+    for i in range(1, parts + 1):
+        pi = f"part_{i:03d}"
+        r1p = _find_first_match(out_dir, [
+            f"*_1.{pi}.fq.gz", f"*_1.{pi}.fastq.gz",
+            f"*_R1*.{pi}.fq.gz", f"*_R1*.{pi}.fastq.gz",
+            f"*.1.{pi}.fq.gz", f"*.1.{pi}.fastq.gz",
+        ])
+        r2p = _find_first_match(out_dir, [
+            f"*_2.{pi}.fq.gz", f"*_2.{pi}.fastq.gz",
+            f"*_R2*.{pi}.fq.gz", f"*_R2*.{pi}.fastq.gz",
+            f"*.2.{pi}.fq.gz", f"*.2.{pi}.fastq.gz",
+        ])
+        if r1p and r2p:
+            pairs.append((r1p, r2p))
+    return pairs
+
+def resolve_batch_dir(group: str, requested: str) -> tuple[Path, str]:
+    """
+    根据请求的 batch 名查找目录；若不存在，则在该 group 下尝试唯一子目录。
+    返回 (batch_dir, resolved_batch_name)
+    """
+    group_dir = ROOT / "NGS_data" / group
+    cand = group_dir / requested
+    if cand.exists():
+        return cand, cand.name
+
+    # fallback: 找到包含 FASTQ 的唯一子目录
+    subdirs = [p for p in group_dir.iterdir() if p.is_dir()]
+    fastq_dirs = []
+    for d in subdirs:
+        r1s, r2s = split_detect_pairs(d)
+        if r1s and r2s:
+            fastq_dirs.append(d)
+    if len(fastq_dirs) == 1:
+        return fastq_dirs[0], fastq_dirs[0].name
+
+    opts = ", ".join(p.name for p in fastq_dirs) or "none"
+    raise HTTPException(404, f"Batch '{requested}' not found under {group_dir}. Available with FASTQ: {opts}")
+
 def split_detect_pairs(folder: Path) -> tuple[list[str], list[str]]:
     """
-    简单匹配 R1/R2：优先 *_1.fq.gz / *_2.fq.gz；否则 *_R1* / *_R2*；再否则 *_1.fastq.gz / *_2.fastq.gz
+    更宽松的 R1/R2 匹配，兼容常见命名：
+      *_R1*.fastq.gz / *_R2*.fastq.gz
+      *_1.fastq.gz / *_2.fastq.gz
+      *.1.fastq.gz / *.2.fastq.gz
+      以及 fq.gz 变体
     """
-    pat1 = list(folder.glob("*_1.fq.gz"))
-    pat2 = list(folder.glob("*_2.fq.gz"))
-    if not pat1 or not pat2:
-        pat1 = list(folder.glob("*_R1*.fq.gz")) or list(folder.glob("*_R1*.fastq.gz"))
-        pat2 = list(folder.glob("*_R2*.fq.gz")) or list(folder.glob("*_R2*.fastq.gz"))
-    if not pat1 or not pat2:
-        pat1 = list(folder.glob("*_1.fastq.gz"))
-        pat2 = list(folder.glob("*_2.fastq.gz"))
+    patterns_r1 = [
+        "*_R1*.fastq.gz", "*_R1*.fq.gz",
+        "*_1.fastq.gz", "*_1.fq.gz",
+        "*.1.fastq.gz", "*.1.fq.gz",
+        "R1*.fastq.gz", "R1*.fq.gz",
+    ]
+    patterns_r2 = [
+        "*_R2*.fastq.gz", "*_R2*.fq.gz",
+        "*_2.fastq.gz", "*_2.fq.gz",
+        "*.2.fastq.gz", "*.2.fq.gz",
+        "R2*.fastq.gz", "R2*.fq.gz",
+    ]
+    pat1: list[Path] = []
+    pat2: list[Path] = []
+    for pat in patterns_r1:
+        pat1 = list(folder.glob(pat))
+        if pat1:
+            break
+    for pat in patterns_r2:
+        pat2 = list(folder.glob(pat))
+        if pat2:
+            break
     return [str(p) for p in sorted(pat1)], [str(p) for p in sorted(pat2)]
 
 
@@ -584,16 +666,15 @@ def prepare_fastq(sel: dict = Body(...)):
     if not nb or not vb:
         raise HTTPException(400, "Both 'N' and 'V' batch names are required")
 
-    run_id = new_run_id(nb, vb)
-    pairs = [("N", nb), ("V", vb)]
+    # 解析实际 batch 目录（若用户未输入正确批次名，则尝试唯一可用目录）
+    n_dir, n_batch = resolve_batch_dir("N", nb)
+    v_dir, v_batch = resolve_batch_dir("V", vb)
+
+    run_id = new_run_id(n_batch, v_batch)
+    pairs = [("N", n_batch, n_dir), ("V", v_batch, v_dir)]
     lines = []
 
-    for group, batch in pairs:
-    # for group in ["N", "V"]:
-        batch_dir = ROOT / "NGS_data" / group / batch
-        if not batch_dir.exists():
-            raise HTTPException(404, f"{batch_dir} not found")
-
+    for group, batch, batch_dir in pairs:
         r1s, r2s = split_detect_pairs(batch_dir)
         if not r1s or not r2s:
             raise HTTPException(400, f"No R1/R2 detected in {batch_dir}")
@@ -601,22 +682,25 @@ def prepare_fastq(sel: dict = Body(...)):
         out_dir = ROOT / "splited_fastq" / batch_dir.name
         ensure_dir_exists(out_dir)
 
-        # 用 micromamba 环境里的 seqkit
-        cmd = [
-            MAMBA, "run", "-n", "viir",
-            "seqkit", "split2",
-            "-1", r1s[0], "-2", r2s[0],
-            "-p", str(PARTS), "-O", str(out_dir), "-f"
-        ]
-        split_run(cmd, cwd=ROOT)
+        # 优先使用已存在的 split 结果
+        pairs_ready = collect_split_pairs(out_dir, PARTS)
 
-        # 采集输出 part 文件名，按 part_001..part_{parts} 逐一写入行
-        for i in range(1, PARTS + 1):
-            pi = f"part_{i:03d}"
-            r1p = next(out_dir.glob(f"*_1.{pi}.fq.gz"), None)
-            r2p = next(out_dir.glob(f"*_2.{pi}.fq.gz"), None)
-            if r1p and r2p:
-                lines.append(f"{group} {r1p} {r2p}")
+        # 如果不存在，则运行 split2 再收集
+        if not pairs_ready:
+            cmd = [
+                MAMBA, "run", "-n", "viir",
+                "seqkit", "split2",
+                "-1", r1s[0], "-2", r2s[0],
+                "-p", str(PARTS), "-O", str(out_dir), "-f"
+            ]
+            split_run(cmd, cwd=ROOT)
+            pairs_ready = collect_split_pairs(out_dir, PARTS)
+
+        if not pairs_ready:
+            raise HTTPException(status_code=400, detail=f"No FASTQ pairs found in {out_dir} (looked for part_XXX R1/R2)")
+
+        for r1p, r2p in pairs_ready:
+            lines.append(f"{group} {r1p} {r2p}")
 
     if not lines:
         raise HTTPException(status_code=400, detail="No FASTQ pairs found to split")

@@ -36,6 +36,10 @@ export const Uploader = {
     UI.bindClick('pickN', () => UI.triggerFile('fileN'));
     UI.bindClick('pickV', () => UI.triggerFile('fileV'));
 
+    // Drag & Drop
+    Uploader._initDropZone('dropN', 'N', 'fileN');
+    Uploader._initDropZone('dropV', 'V', 'fileV');
+
     // 上传按钮
     UI.bindClick('uploadN', () => Uploader.uploadGroup('N'));
     UI.bindClick('uploadV', () => Uploader.uploadGroup('V'));
@@ -82,7 +86,7 @@ export const Uploader = {
     this.internal.groups[group].uploaded = false;
     this._setStatus(group, `${group} group: ${names.length} file(s) ready to upload`, "info");
     this._suggestRunId(names);
-    this._resetProgressUI();
+    this._resetProgressUI(group);
     console.log("[Uploader] onFilesSelected", group, names);
   },
 
@@ -98,7 +102,6 @@ export const Uploader = {
       return;
     }
     const batchInputId = group === "N" ? "batchN" : "batchV";
-    const fileInputId = group === "N" ? "fileN" : "fileV";
     const files = info.files;
     const batch = UI.val(batchInputId).trim() || group;
     const fd = new FormData();
@@ -108,6 +111,7 @@ export const Uploader = {
 
     const start = Date.now();
     this._setStatus(group, `${group} uploading...`, "info");
+    this._log(`${group}: uploading ${files.length} file(s) to batch ${batch}`);
     try {
       const axiosInstance = window.axios;
       let resp;
@@ -160,15 +164,16 @@ export const Uploader = {
       }
 
       this.internal.groups[group].uploaded = true;
-      state.uploadDone = this.internal.groups.N.uploaded || this.internal.groups.V.uploaded;
+      state.uploadDone = this.internal.groups.N.uploaded && this.internal.groups.V.uploaded;
       const uploadDir = resp?.data?.dir || '';
       this._setStatus(group, `${group} upload finished → ${uploadDir}`, "success");
       UI.setDisabled(`pick${group}`, true);
+      this._log(`${group}: uploaded to ${uploadDir}`);
       this._updateBuildButton();
     } catch (err) {
       console.error("[Uploader] uploadGroup error", err);
       this._setStatus(group, `${group} upload failed: ${err.message}`, "error");
-      this._setUploadProgress(0,0,0,0,0);
+      this._setUploadProgress(0,0,0,0,0,group);
     }
   },
 
@@ -258,9 +263,9 @@ export const Uploader = {
   },
 
   _setUploadProgress(pct, loaded, total, speed, eta, group) {
-    const bar = document.getElementById('uploadProg');
-    const wrap = document.getElementById('uploadProgBar');
-    const text = document.getElementById('uploadProgText');
+    const bar = document.getElementById(`uploadProg${group}`);
+    const wrap = document.getElementById(`uploadProgBar${group}`);
+    const text = document.getElementById(`uploadProgText${group}`);
     if (wrap) wrap.style.display = 'block';
     if (bar) bar.style.width = `${Math.min(100, pct)}%`;
 
@@ -277,10 +282,10 @@ export const Uploader = {
     }
   },
 
-  _resetProgressUI() {
-    const bar = document.getElementById('uploadProg');
-    const wrap = document.getElementById('uploadProgBar');
-    const text = document.getElementById('uploadProgText');
+  _resetProgressUI(group) {
+    const bar = document.getElementById(`uploadProg${group || ''}`);
+    const wrap = document.getElementById(`uploadProgBar${group || ''}`);
+    const text = document.getElementById(`uploadProgText${group || ''}`);
     if (bar) bar.style.width = '0%';
     if (wrap) wrap.style.display = 'none';
     if (text) text.textContent = '';
@@ -397,9 +402,37 @@ export const Uploader = {
   },
 
   _updateBuildButton() {
-    const enabledNew = (this.internal.groups.N.uploaded || this.internal.groups.V.uploaded) && this.internal.mode === "new";
+    const enabledNew = (this.internal.groups.N.uploaded && this.internal.groups.V.uploaded) && this.internal.mode === "new";
     const enabledExisting = (!!state.sample_list_path || !!this.internal.sample_list_path) && this.internal.mode === "existing";
     UI.setDisabled('btnBuildList', !enabledNew);
     UI.setDisabled('btnGoConfig', !(enabledNew || enabledExisting));
+  },
+
+  _log(msg) {
+    const box = document.getElementById('uploadLog');
+    if (!box) return;
+    const now = new Date();
+    const stamp = now.toLocaleTimeString();
+    if (box.textContent === '(no uploads yet)') box.textContent = '';
+    box.textContent += `[${stamp}] ${msg}\n`;
+    box.scrollTop = box.scrollHeight;
+  },
+
+  _initDropZone(zoneId, group, inputId) {
+    const zone = document.getElementById(zoneId);
+    const input = document.getElementById(inputId);
+    if (!zone || !input) return;
+    const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+    ['dragenter','dragover','dragleave','drop'].forEach(ev => {
+      zone.addEventListener(ev, prevent);
+    });
+    ['dragenter','dragover'].forEach(ev => zone.addEventListener(ev, () => zone.classList.add('dragover')));
+    ['dragleave','drop'].forEach(ev => zone.addEventListener(ev, () => zone.classList.remove('dragover')));
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer?.files;
+      if (!files?.length) return;
+      Uploader.onFilesSelected(group, files);
+    });
   }
 };

@@ -36,6 +36,20 @@ export const Review = {
     UI.setText("reviewConfig", cfgTxt || "(empty)");
     UI.setText("reviewConfigWarn", cfgTxt ? "" : "⚠️");
 
+    // Pfam & Adapters
+    try {
+      const pf = await API.readFile(state.pfamPath || UI.val('pfamPath'));
+      UI.setText("reviewPfam", pf.slice(0, 4000));
+    } catch {
+      UI.setText("reviewPfam", "(Unable to load pfam list)");
+    }
+    try {
+      const ad = await API.readFile(state.adapterPath || UI.val('adapterPath'));
+      UI.setText("reviewAdapter", ad.slice(0, 4000));
+    } catch {
+      UI.setText("reviewAdapter", "(Unable to load adapters)");
+    }
+
     // Key Values
     UI.setText("reviewOut", UI.val("outDir"));
     UI.setText("reviewThreads", UI.val("threads"));

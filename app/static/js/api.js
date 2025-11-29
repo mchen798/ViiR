@@ -82,8 +82,8 @@ export const API = {
   // 3. sample_list.txt 构建与预览
   // =====================================
 
-  prepareFastq(Nbatch, Vbatch) {
-    return this._json('/prepare_fastq', 'POST', { N: Nbatch, V: Vbatch });
+  prepareFastq(N, V) {
+    return this._json('/prepare_fastq', 'POST', { N, V });
   },
 
   readFile(path) {

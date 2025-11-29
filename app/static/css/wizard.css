@@ -72,6 +72,25 @@
   font-weight: 500;
 }
 
+/* Home / landing */
+.home .hero {
+  background: linear-gradient(90deg, #e6f4ff, #f5fbff);
+  padding: 28px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.hero .badge { display:inline-block; padding:4px 10px; background:#1677ff; color:#fff; border-radius:6px; font-weight:600; margin-bottom:8px;}
+.hero h1 { margin:4px 0 8px; }
+.hero .sub { color:#444; max-width:760px; }
+.hero-actions { display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap;}
+.version { color:#666; }
+.home-section { margin:20px 0; }
+.home-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
+.home-card { min-height:220px; }
+.workflow { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.workflow .wf-step { background:#f0f5ff; border:1px solid #d6e4ff; padding:8px 12px; border-radius:8px; }
+.workflow .wf-arrow { color:#999; }
+
 /* 右侧内容区 */
 .wizard-content {
   flex: 1;
@@ -131,6 +150,18 @@
 
 .status-text {
   color: #555;
+}
+
+.upload-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:12px; }
+.upload-card { border:1px solid #e5e5e5; border-radius:10px; padding:12px; background:#fff; display:flex; flex-direction:column; gap:8px; }
+.upload-head h3 { margin:0; }
+.dropzone { border:2px dashed #a1c4ff; padding:12px; text-align:center; border-radius:10px; background:#f8fbff; cursor:pointer; }
+.dropzone.dragover { border-color:#1677ff; background:#e6f4ff; }
+.upload-log .log-box { max-height:150px; overflow:auto; }
+
+#btnGen {
+  width: 100%;
+  font-size: 15px;
 }
 
 .existing-row {

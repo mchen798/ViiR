@@ -2,7 +2,6 @@
 // config.js
 // 负责：config.yaml 的生成、编辑、保存
 // =====================================
-// const VERSION = '20251128';
 import { UI } from '/static/js/ui.js?v=20251128';
 import { API } from '/static/js/api.js?v=20251128';
 import { state, resetReviewConfirmation } from '/static/js/state.js?v=20251128';
@@ -12,15 +11,15 @@ import { Review } from '/static/js/review.js?v=20251128';
 
 export const Config = {
   templateBase: "",
+  generated: false,
+  saved: false,
+  _internalUpdating: false,
 
   // 初始化（app.js 中调用）
   init() {
     // Generate Preview 按钮
     UI.bindClick('btnGen', () => {    
       const yml = Config.generate();
-      if (yml) {
-        Config.onConfigInputChanged();
-      }
       updateRunButtonState();
     });
 
@@ -52,7 +51,10 @@ export const Config = {
 
     const cfgArea = UI.el('cfg');
     if (cfgArea) {
-      cfgArea.addEventListener('input', () => Config.onConfigInputChanged());
+      cfgArea.addEventListener('input', () => {
+        if (Config._internalUpdating) return;
+        Config.onConfigInputChanged();
+      });
     }
 
     UI.setVal('adapterPath', state.adapterPath);
@@ -62,6 +64,8 @@ export const Config = {
     UI.bindClick('togglePfam', () => Config.toggleViewer('viewPfam', '/opt/viir/resources/Pfam_IDs_list.txt'));
     Config.validateRequired();
     Config._applyOutPrefix(true);
+    Config._setStatus("Fill parameters, then Generate → Save.");
+    Config._updateSaveButton();
   },
 
   // ===============================
@@ -76,10 +80,7 @@ export const Config = {
     Config._applyOutPrefix(true);
 
     // 自动重新生成 YAML 预览
-    const yml = this.generate();
-    if (yml) {
-      this.onConfigInputChanged();
-    }
+    this.generate();
   },
 
   // ===============================
@@ -139,12 +140,18 @@ export const Config = {
 
     const cfgArea = UI.el('cfg');
     if (cfgArea) {
+      Config._internalUpdating = true;
       cfgArea.value = pretty;
+      Config._internalUpdating = false;
     } else {
       UI.setText('cfg', pretty);
     }
     Config.validateRequired();
     Config._toggleNext(false);
+    Config.generated = true;
+    Config.saved = false;
+    Config._setStatus("Config generated (not yet saved).");
+    Config._updateSaveButton();
     return pretty;
   },
 
@@ -157,6 +164,10 @@ export const Config = {
     Config.validateRequired();
     updateRunButtonState();
     Config._toggleNext(false);
+    Config.generated = false;
+    Config.saved = false;
+    Config._setStatus("Parameters changed. Please generate config again.");
+    Config._updateSaveButton();
   },
 
 
@@ -173,6 +184,9 @@ export const Config = {
       if (!yml) {
         throw new Error("Config content is empty");
       }
+      if (!Config._isYamlValid(yml)) {
+        throw new Error("Config YAML looks invalid");
+      }
       const suffix = Config._buildSuffix();
 
       const result = await API.saveConfig(yml, suffix, true);
@@ -186,6 +200,9 @@ export const Config = {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       resetReviewConfirmation();
       updateRunButtonState();
+      Config.saved = true;
+      Config.generated = true;
+      Config._setStatus(`Config saved. You can proceed to Step 3. Path: ${result.path}`);
       if (cfgArea) {
         cfgArea.classList.remove('flash');
         void cfgArea.offsetWidth; // force reflow
@@ -197,6 +214,7 @@ export const Config = {
     }
 
     UI.busy('btnSaveCfg', false);
+    Config._updateSaveButton();
   },
 
   validateRequired() {
@@ -245,6 +263,21 @@ export const Config = {
   _toggleNext(show) {
     UI.toggle('btnNextStep3', !!show);
   },
+  _updateSaveButton() {
+    const cfgArea = UI.el('cfg');
+    const txt = cfgArea?.value.trim() || "";
+    const ok = Config.generated && Config._isYamlValid(txt);
+    UI.setDisabled('btnSaveCfg', !ok);
+  },
+
+  _setStatus(msg) {
+    UI.setText('cfgStatus', msg || '');
+  },
+
+  _isYamlValid(txt) {
+    if (!txt) return false;
+    return /^\s*\w[\w_-]*\s*:/m.test(txt);
+  },
 
   _buildSuffix() {
     const ts = new Date();
@@ -254,8 +287,7 @@ export const Config = {
     const hh = String(ts.getHours()).padStart(2, '0');
     const mm = String(ts.getMinutes()).padStart(2, '0');
     const ss = String(ts.getSeconds()).padStart(2, '0');
-    // const stamp = `${y}${m}${d}-${hh}${mm}${ss}`;
-    const stamp = `${y}${m}${d}-${hh}${mm}`;
+    const stamp = `${y}${m}${d}-${hh}${mm}${ss}`;
 
     const baseInput = this.templateBase || UI.val('runId').trim() || state.run_id || 'config';
     const base = Config._sanitize(baseInput) || "config";

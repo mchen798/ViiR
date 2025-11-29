@@ -39,12 +39,70 @@
 <!-- ======================= -->
 <!-- Page 1: HOME -->
 <!-- ======================= -->
-<section id="page-home" class="page active">
-  <h2>Recent Tasks</h2>
-
-  <div id="recent" class="cards">
-    <div class="hint">Loading...</div>
+<section id="page-home" class="page active home">
+  <div class="hero">
+    <div class="hero-text">
+      <div class="badge">Web-ViiR</div>
+      <h1>Virus Identification Independent of Reference sequences</h1>
+      <p class="sub">
+        A local, one-click virus/viroid detection workflow for plant RNA-Seq datasets. Runs entirely inside Docker with no Linux expertise required.
+      </p>
+      <div class="hero-actions">
+        <button id="btnStart" class="btn btn-primary">Start New Analysis</button>
+        <div class="version">Web-ViiR v0.9 (local Docker edition)</div>
+      </div>
+    </div>
   </div>
+
+  <section class="home-section">
+    <h3>What This Tool Does</h3>
+    <p>
+      Web-ViiR automatically performs the complete workflow from FASTQ upload to differential expression, viral domain scanning, rRNA filtering, k-mer profiling, and BLASTn annotation. It runs entirely on your local machine (Docker), requires no Linux knowledge, and produces publishable-quality results.
+    </p>
+  </section>
+
+  <section class="home-grid">
+    <div class="card home-card">
+      <h3>Input Requirements</h3>
+      <p>Provide paired-end RNA-Seq FASTQ files for two groups (N & V). Example filenames:</p>
+      <ul>
+        <li>R_DKDL250007304-1A_233VFTLT3_L2_1.fq.gz</li>
+        <li>R_DKDL250007304-1A_233VFTLT3_L2_2.fq.gz</li>
+      </ul>
+      <p class="note">Format: paired-end (xxx_1.fq.gz + xxx_2.fq.gz)</p>
+    </div>
+    <div class="card home-card">
+      <h3>Output Overview</h3>
+      <ul>
+        <li>Trinity assemblies & expression matrices</li>
+        <li>DESeq2 DEG tables & volcano plots</li>
+        <li>Pfam viral domain hits & rRNA summaries</li>
+        <li>k-mer viral signatures & BLASTn annotations</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <h3>Workflow</h3>
+    <div class="workflow">
+      <div class="wf-step">1. Upload FASTQ</div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-step">2. Build sample list</div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-step">3. Generate config</div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-step">4. Review</div>
+      <div class="wf-arrow">→</div>
+      <div class="wf-step">5. Run & download</div>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <h3>Recent Tasks</h3>
+    <div id="recent" class="cards">
+      <div class="hint">Loading...</div>
+    </div>
+  </section>
 </section>
 
 
@@ -85,35 +143,59 @@
             <label><input type="radio" name="datasetMode" value="existing"> Use existing dataset</label>
           </div>
 
-          <div id="panel-new-dataset">
-            <div class="group-block">
-              <div class="row upload-row">
+          <div id="panel-new-dataset" class="upload-grid">
+            <div class="upload-card">
+              <div class="upload-head">
+                <h3>N group (control)</h3>
+                <p class="helper">Upload paired-end FASTQ (N group). Example: R_DKDL250007304-1A_233VFTLT3_L2_1.fq.gz</p>
+              </div>
+              <div class="dropzone" id="dropN">
+                <p>Drag & drop N FASTQ files here</p>
+                <p class="small">or</p>
                 <button id="pickN" class="btn">Pick N FASTQ</button>
                 <input type="file" id="fileN" multiple style="display:none">
-                <button id="uploadN" class="btn btn-primary">Upload N</button>
-                <input id="batchN" placeholder="Batch N label (optional)">
               </div>
-              <div class="helper">Select and upload control group FASTQ files.</div>
+              <div class="row upload-row">
+                <input id="batchN" placeholder="Batch N label (optional)">
+                <button id="uploadN" class="btn btn-primary">Upload N</button>
+              </div>
+              <div class="helper">Paired files must include _1 and _2.</div>
               <div id="filesN" class="small filename-box"></div>
+              <div class="progress-bar" id="uploadProgBarN" style="display:none;">
+                <div id="uploadProgN" class="progress"></div>
+              </div>
+              <div id="uploadProgTextN" class="small"></div>
               <div id="statusN" class="small status-text">N group upload: not started</div>
             </div>
 
-            <div class="group-block">
-              <div class="row upload-row">
+            <div class="upload-card">
+              <div class="upload-head">
+                <h3>V group (treatment)</h3>
+                <p class="helper">Upload paired-end FASTQ (V group). Example: R_DKDL250007304-1A_233VFTLT3_L2_2.fq.gz</p>
+              </div>
+              <div class="dropzone" id="dropV">
+                <p>Drag & drop V FASTQ files here</p>
+                <p class="small">or</p>
                 <button id="pickV" class="btn">Pick V FASTQ</button>
                 <input type="file" id="fileV" multiple style="display:none">
-                <button id="uploadV" class="btn btn-primary">Upload V</button>
-                <input id="batchV" placeholder="Batch V label (optional)">
               </div>
-              <div class="helper">Select and upload treatment/virus group FASTQ files.</div>
+              <div class="row upload-row">
+                <input id="batchV" placeholder="Batch V label (optional)">
+                <button id="uploadV" class="btn btn-primary">Upload V</button>
+              </div>
+              <div class="helper">Paired files must include _1 and _2.</div>
               <div id="filesV" class="small filename-box"></div>
+              <div class="progress-bar" id="uploadProgBarV" style="display:none;">
+                <div id="uploadProgV" class="progress"></div>
+              </div>
+              <div id="uploadProgTextV" class="small"></div>
               <div id="statusV" class="small status-text">V group upload: not started</div>
             </div>
 
-            <div class="progress-bar" id="uploadProgBar" style="display:none;">
-              <div id="uploadProg" class="progress"></div>
+            <div class="upload-log card">
+              <h4>Upload Log</h4>
+              <div id="uploadLog" class="log-box small">(no uploads yet)</div>
             </div>
-            <div id="uploadProgText" class="small"></div>
 
             <div class="runid-block">
               <label>run_id:</label>
@@ -219,13 +301,17 @@
             </div>
 
             <button id="btnGen" class="btn">Generate Config</button>
+            <p class="help-text" id="cfgFlowHint">
+              To set up a ViiR run: 1) adjust parameters → 2) click <strong>Generate Config</strong> → 3) click <strong>Save Config</strong> before proceeding.
+            </p>
 
             <textarea id="cfg" class="cfg-box"></textarea>
 
             <div class="row" style="gap:8px; align-items:center; flex-wrap:wrap;">
-              <button id="btnSaveCfg" class="btn btn-primary">Save Config</button>
+              <button id="btnSaveCfg" class="btn btn-primary" disabled>Save Config</button>
               <button id="btnNextStep3" class="btn btn-primary" style="display:none;">Next → Step 3</button>
             </div>
+            <div id="cfgStatus" class="help-text"></div>
 
             <div class="card" style="margin-top:12px;">
               <div class="row" style="justify-content: space-between; align-items:center;">
@@ -268,6 +354,18 @@
                     </div>
 
                     <div class="review-card">
+                      <h3><span class="review-icon">🧬</span>Pfam Domains</h3>
+                      <p class="helper">Pfam viral domains help prioritize candidate sequences.</p>
+                      <pre id="reviewPfam" class="preview"></pre>
+                    </div>
+
+                    <div class="review-card">
+                      <h3><span class="review-icon">🧪</span>Adapters</h3>
+                      <p class="helper">Adapters are trimmed early to improve assembly quality.</p>
+                      <pre id="reviewAdapter" class="preview"></pre>
+                    </div>
+
+                    <div class="review-card">
                       <h3><span class="review-icon">✔️</span>Run Settings</h3>
                       <div class="review-kv">
                           <div><strong>Output:</strong> <span id="reviewOut"></span></div>
@@ -289,9 +387,11 @@
         <div class="wizard-panel" id="wizard-step4">
         <div class="card">
             <h2>Step 4 — Run</h2>
+            <p class="helper">Expected runtime: 120–600 min depending on data size. Logs will show progress; results are downloadable once finished.</p>
             <div id="runStepBanner" class="banner" style="display:none;">Pipeline is running, check Run Panel for progress.</div>
             <button id="btnRun" class="btn btn-primary">Run ViiR</button>
             <button id="btnStop" class="btn btn-danger">Stop</button>
+            <button id="btnGoRunPanel" class="btn">Go to Run Panel after starting</button>
         </div>
         </div>
 
