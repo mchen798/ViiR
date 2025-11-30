@@ -14,7 +14,8 @@ export function updateRunButtonState() {
   const canRun =
     state.sample_list_path &&
     UI.val("cfg").trim() &&
-    state.reviewConfirmed;
+    state.reviewConfirmed &&
+    state.configSaved === true;
 
   UI.setDisabled("btnRun", !canRun);
 }

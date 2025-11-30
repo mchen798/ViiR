@@ -17,6 +17,7 @@ export const Config = {
 
   // 初始化（app.js 中调用）
   init() {
+    state.configSaved = false;
     // Generate Preview 按钮
     UI.bindClick('btnGen', () => {    
       const yml = Config.generate();
@@ -64,8 +65,7 @@ export const Config = {
     UI.bindClick('togglePfam', () => Config.toggleViewer('viewPfam', '/opt/viir/resources/Pfam_IDs_list.txt'));
     Config.validateRequired();
     Config._applyOutPrefix(true);
-    Config._setStatus("Fill parameters, then Generate → Save.");
-    Config._updateSaveButton();
+    Config._setStateDirty("Fill parameters, then Generate → Save.");
   },
 
   // ===============================
@@ -146,28 +146,12 @@ export const Config = {
     } else {
       UI.setText('cfg', pretty);
     }
-    Config.validateRequired();
-    Config._toggleNext(false);
-    Config.generated = true;
-    Config.saved = false;
-    Config._setStatus("Config generated (not yet saved).");
-    Config._updateSaveButton();
+    Config._setStateGenerated();
     return pretty;
   },
 
   onConfigInputChanged() {
-    Wizard.setDone(2, false);
-    Wizard.enable(2);
-    Wizard.setActive(2);
-    Wizard.disableFrom(3);
-    resetReviewConfirmation();
-    Config.validateRequired();
-    updateRunButtonState();
-    Config._toggleNext(false);
-    Config.generated = false;
-    Config.saved = false;
-    Config._setStatus("Parameters changed. Please generate config again.");
-    Config._updateSaveButton();
+    Config._setStateDirty("Parameters changed. Please generate config again.");
   },
 
 
@@ -192,17 +176,7 @@ export const Config = {
       const result = await API.saveConfig(yml, suffix, true);
 
       UI.toast(`Config saved: ${result.path}`, "success");
-      Wizard.markDone(2);
-      Wizard.enable(3);
-      Wizard.disableFrom(4);
-      Config._toggleNext(true);
-      Review.refresh();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      resetReviewConfirmation();
-      updateRunButtonState();
-      Config.saved = true;
-      Config.generated = true;
-      Config._setStatus(`Config saved. You can proceed to Step 3. Path: ${result.path}`);
+      Config._setStateSaved(`Config saved. You can proceed to Step 3. Path: ${result.path}`);
       if (cfgArea) {
         cfgArea.classList.remove('flash');
         void cfgArea.offsetWidth; // force reflow
@@ -272,6 +246,47 @@ export const Config = {
 
   _setStatus(msg) {
     UI.setText('cfgStatus', msg || '');
+  },
+
+  _setStateDirty(msg) {
+    Config.generated = false;
+    Config.saved = false;
+    state.configSaved = false;
+    Wizard.setDone(2, false);
+    Wizard.enable(2);
+    Wizard.setActive(2);
+    Wizard.disableFrom(3);
+    resetReviewConfirmation();
+    Config.validateRequired();
+    updateRunButtonState();
+    Config._toggleNext(false);
+    Config._setStatus(msg || "Parameters changed. Please generate config again.");
+    Config._updateSaveButton();
+  },
+
+  _setStateGenerated() {
+    Config.generated = true;
+    Config.saved = false;
+    state.configSaved = false;
+    Config.validateRequired();
+    Config._toggleNext(false);
+    Config._setStatus("Config generated (not yet saved).");
+    Config._updateSaveButton();
+  },
+
+  _setStateSaved(msg) {
+    Config.generated = true;
+    Config.saved = true;
+    state.configSaved = true;
+    Wizard.markDone(2);
+    Wizard.enable(3);
+    Wizard.disableFrom(4);
+    Config._toggleNext(true);
+    Review.refresh();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    resetReviewConfirmation();
+    updateRunButtonState();
+    Config._setStatus(msg || "Config saved. You can proceed to Step 3.");
   },
 
   _isYamlValid(txt) {
