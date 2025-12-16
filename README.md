@@ -1,7 +1,18 @@
+## ViiR: Virus Identification Independent of Reference Sequences
 
-# ViiR
+ViiR is an academic research pipeline designed for the detection and characterization
+of plant RNA viruses using dsRNA-enriched RNA-Seq data.
 
-ViiR (Virus Identification Independent of Reference sequences) assembles and annotates viral reads from double-strand RNA sequence data. The pipeline combines Trinity, differential expression analysis and several annotation steps.
+The framework integrates de novo transcriptome assembly, expression-based comparison
+between symptomatic and healthy samples, and domain-based screening to identify
+virus-related sequences without relying on a host reference genome.
+
+ViiR is particularly suitable for exploratory virus discovery, including the detection
+of divergent or previously uncharacterized viral sequences.
+
+This repository provides an implementation of the overall workflow for research use.
+Specific decision strategies, scoring rules, and downstream interpretation schemes
+may vary depending on experimental design and application context.
 
 ## Requirements
 - [Docker](https://docs.docker.com/get-docker/) installed on your system.
