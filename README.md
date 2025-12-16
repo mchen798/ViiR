@@ -1,7 +1,7 @@
 
 # ViiR
 
-ViiR (Virus Identification Independent of Reference sequences) assembles and annotates viral reads from RNA-Seq data. The pipeline combines Trinity, differential expression analysis and several annotation steps.
+ViiR (Virus Identification Independent of Reference sequences) assembles and annotates viral reads from double-strand RNA sequence data. The pipeline combines Trinity, differential expression analysis and several annotation steps.
 
 ## Requirements
 - [Docker](https://docs.docker.com/get-docker/) installed on your system.
