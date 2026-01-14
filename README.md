@@ -31,7 +31,7 @@ docker build -t viir_env:min .
 You can also execute the pipeline directly from the command line. Mount a data directory and override the container entrypoint:
 
 ```bash
-# docker run --rm -it --shm-size=32g -v /VIIR-WORKFOLDER:/workspace:delegated viir_env:min
+# docker run --rm -it --shm-size=32g -v /AbsPATH-HOST-VIIR-WORKFOLDER:/workspace:delegated viir_env:min
 # micromamba activate viir
 # cd /workspace
 # viir config_example.yaml 
