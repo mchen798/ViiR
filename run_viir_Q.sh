@@ -826,12 +826,18 @@ run_blastn() {
         # git clone https://github.com/YuSugihara/ViiR_DB.git
         # cd ViiR_DB
         log "[INFO] BLASTN with Default_db..."
-        cd ${BLASTNDB_FASTA}
-        cat ./NCBI_Virus_RefSeq_nuc-23-01-23.*.fasta.gz > ../NCBI_Virus_RefSeq_nuc-23-01-23.fasta.gz
-        cd ..
-        gzip -d NCBI_Virus_RefSeq_nuc-23-01-23.fasta.gz
+
+        # cd ${BLASTNDB_FASTA}
+        # cat ./NCBI_Virus_RefSeq_nuc-23-01-23.*.fasta.gz > ../NCBI_Virus_RefSeq_nuc-23-01-23.fasta.gz
+        # cd ..
+        # gzip -d NCBI_Virus_RefSeq_nuc-23-01-23.fasta.gz
         
-        cp ${VIIR_RESOURCES}/NCBI_Virus_RefSeq_nuc-23-01-23.fasta ${OUT_DIR}/90_blastn/blastndb/
+        # cp ${VIIR_RESOURCES}/NCBI_Virus_RefSeq_nuc-23-01-23.fasta ${OUT_DIR}/90_blastn/blastndb/
+
+        zcat ${BLASTNDB_FASTA}/NCBI_Virus_RefSeq_nuc-23-01-23.*.fasta.gz > ${OUT_DIR}/90_blastn/blastndb/NCBI_Virus_RefSeq_nuc-23-01-23.fasta
+
+
+
         BLASTNDB_FASTA=${OUT_DIR}/90_blastn/blastndb/NCBI_Virus_RefSeq_nuc-23-01-23.fasta
         # BLASTNDB_FASTA=${OUT_DIR}/90_blastn/blastndb/${DB_basename%.gz}
         cd ${OUT_DIR}/90_blastn/blastndb/
