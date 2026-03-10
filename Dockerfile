@@ -10,6 +10,14 @@ RUN if [ "$APT_FORCE_IPV4" = "true" ]; then \
       echo 'Acquire::http::Timeout "30"; Acquire::https::Timeout "30";' > /etc/apt/apt.conf.d/99timeout; \
     fi
 
+ARG UID=1000
+ARG GID=1000
+
+RUN groupadd -g ${GID} appuser && \
+    useradd -m -u ${UID} -g ${GID} appuser
+
+USER appuser
+
 # 避免 timezone/apt 交互
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Etc/UTC \
